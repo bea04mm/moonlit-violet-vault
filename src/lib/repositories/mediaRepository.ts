@@ -51,7 +51,7 @@ export async function getMediaRepository(): Promise<MediaRepository> {
     return query;
   }
 
-  return {
+  const repo: MediaRepository = {
     async findAll(filters) {
       const { data, error } = await buildQuery(filters);
       if (error) throw new Error(`[MediaRepository] findAll: ${error.message}`);
@@ -71,7 +71,7 @@ export async function getMediaRepository(): Promise<MediaRepository> {
     },
 
     async findByType(type, filters) {
-      return this.findAll({ ...filters, type });
+      return repo.findAll({ ...filters, type });
     },
 
     async count(filters) {
@@ -126,4 +126,6 @@ export async function getMediaRepository(): Promise<MediaRepository> {
       }
     },
   };
+
+  return repo;
 }
