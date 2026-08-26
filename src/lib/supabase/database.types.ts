@@ -49,6 +49,7 @@ export interface MediaItem {
   original_title: string | null;
   tmdb_id: number | null;
   google_books_id: string | null;
+  goodreads_id: string | null;
   isbn: string | null;
   cover_url: string | null;
   synopsis: string | null;
