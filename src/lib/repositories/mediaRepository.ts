@@ -91,7 +91,8 @@ export async function getMediaRepository(): Promise<MediaRepository> {
     async insert(item) {
       const { data, error } = await supabase
         .from("media_items")
-        .insert(item as any) // Cast required due to Supabase type inference on optional UUIDs/dates
+        // @ts-expect-error Supabase insert types can be overly strict
+        .insert(item)
         .select()
         .single();
         
@@ -104,7 +105,8 @@ export async function getMediaRepository(): Promise<MediaRepository> {
     async update(id, updates) {
       const { data, error } = await supabase
         .from("media_items")
-        .update(updates as any)
+        // @ts-expect-error Supabase update types can be overly strict with JSONb objects
+        .update(updates)
         .eq("id", id)
         .select()
         .single();
