@@ -104,7 +104,7 @@ export async function addMediaToVault(result: SearchResult): Promise<void> {
   let runtimeMinutes = result.runtimeMinutes;
   let episodeCount = result.episodeCount;
   let seasonCount = result.seasonCount;
-  let seasonProgress: Record<string, { watched: number; total: number }> | null = null;
+  let seasonProgress: Record<string, SeasonData> | null = null;
   let tmdbStatus: string | null = null;
   let nextEpisodeAirDate: string | null = null;
 
