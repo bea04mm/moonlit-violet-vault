@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 interface BadgeProps {
   children: ReactNode;
   className?: string;
-  variant?: "default" | "violet" | "blossom" | "starlight" | "muted";
+  variant?: "default" | "violet" | "blossom" | "starlight" | "muted" | "glass";
 }
 
 const VARIANT_STYLES: Record<string, string> = {
@@ -20,6 +20,8 @@ const VARIANT_STYLES: Record<string, string> = {
     "bg-[color-mix(in_srgb,var(--color-starlight-500)_15%,transparent)] text-[var(--color-starlight-400)] border-[color-mix(in_srgb,var(--color-starlight-500)_30%,transparent)]",
   muted:
     "bg-[color-mix(in_srgb,var(--color-lunar-700)_50%,transparent)] text-[var(--color-lunar-400)] border-[color-mix(in_srgb,var(--color-lunar-600)_40%,transparent)]",
+  glass:
+    "bg-[rgba(255,255,255,0.1)] text-[var(--color-lunar-100)] border-[rgba(255,255,255,0.2)] backdrop-blur-sm shadow-sm",
 };
 
 export function Badge({
