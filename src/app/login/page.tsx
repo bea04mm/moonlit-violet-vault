@@ -4,6 +4,8 @@
 
 import type { Metadata } from "next";
 import { LoginButton } from "@/components/auth/LoginButton";
+import NightlightIcon from "@mui/icons-material/Nightlight";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 
 export const metadata: Metadata = {
   title: "Sign In · Moonlit Violet Vault",
@@ -41,8 +43,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="relative z-10 w-full max-w-sm">
         {/* Logo / title */}
         <div className="text-center mb-10">
-          <div className="text-5xl mb-4" aria-hidden="true">
-            🌙
+          <div className="flex justify-center mb-4 text-[var(--color-violet-400)]" aria-hidden="true">
+            <NightlightIcon style={{ fontSize: 56 }} />
           </div>
           <h1
             className="text-3xl font-display font-bold text-gradient-violet mb-2"
@@ -62,10 +64,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         >
           <div className="text-center">
             <h2
-              className="text-lg font-semibold mb-1"
+              className="text-lg font-semibold mb-1 flex items-center justify-center gap-1.5"
               style={{ color: "var(--color-lunar-100)" }}
             >
-              Welcome back ✨
+              Welcome back <AutoAwesomeIcon style={{ fontSize: 18, color: "var(--color-violet-400)" }} />
             </h2>
             <p className="text-sm" style={{ color: "var(--color-lunar-400)" }}>
               Sign in with a Google account to enter the vault.
