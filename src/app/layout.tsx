@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Bricolage_Grotesque } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
 import MuiProvider from "@/lib/MuiProvider";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -62,6 +63,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AppRouterCacheProvider>
           <MuiProvider>
+            <ServiceWorkerRegister />
             <CommandPalette />
             {children}
           </MuiProvider>
