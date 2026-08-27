@@ -21,6 +21,12 @@ const bricolage = Bricolage_Grotesque({
   weight: ["400", "500", "600", "700", "800"],
 });
 
+import type { Viewport } from "next";
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0f",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "Moonlit Violet Vault",
@@ -30,6 +36,11 @@ export const metadata: Metadata = {
     "A personal media vault for movies, TV series, and books — beautifully organised under moonlit violet skies.",
   keywords: ["media tracker", "movies", "books", "tv series", "personal vault"],
   authors: [{ name: "Moonlit Violet Vault" }],
+  appleWebApp: {
+    title: "Vault",
+    statusBarStyle: "black-translucent",
+    capable: true,
+  },
   openGraph: {
     title: "Moonlit Violet Vault",
     description: "My personal media sanctuary.",
