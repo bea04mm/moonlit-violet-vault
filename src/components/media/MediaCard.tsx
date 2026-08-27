@@ -44,6 +44,7 @@ export function MediaCard({ item }: MediaCardProps) {
   let currentS = "";
   let currentE = 0;
   let seasonLeft = 0;
+  let currentEpTitle = "";
 
   if (isWatchingSeries && item.season_progress) {
     const sortedSeasons = Object.keys(item.season_progress)
@@ -56,6 +57,7 @@ export function MediaCard({ item }: MediaCardProps) {
         currentS = s;
         currentE = data.watched + 1;
         seasonLeft = data.total - data.watched;
+        currentEpTitle = data.episodes?.[String(currentE)]?.title || "";
         break;
       }
     }
@@ -178,30 +180,28 @@ export function MediaCard({ item }: MediaCardProps) {
           }}
         />
 
-        {/* Top overlay gradient to ensure badges are readable on light/white covers */}
-        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/70 to-transparent z-0 pointer-events-none" />
-
-        {/* Top-left: Media type badge */}
-        <div className="absolute top-2 left-2 z-10">
-          <Chip 
-            label={TYPE_LABELS[item.type]} 
-            size="small"
-            className="text-[var(--color-violet-300)] bg-[var(--color-violet-500)]/10 border border-[var(--color-violet-500)]/20 shadow-md backdrop-blur-sm bg-black/40 font-semibold"
-            sx={{ height: 20, fontSize: '0.65rem' }}
-          />
-        </div>
       </div>
 
       {/* Card body */}
-      <div className="p-4 flex-1 flex flex-col justify-center gap-1">
+      <div className="p-4 flex-1 flex flex-col gap-1">
         {/* Top badges for status & new episodes */}
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <Chip 
-            label={STATUS_LABELS[item.status]} 
-            size="small"
-            className={`${STATUS_COLORS[item.status]} shadow-sm font-semibold`}
-            sx={{ height: 20, fontSize: '0.65rem' }}
-          />
+          {isDashboard && (
+            <Chip 
+              label={TYPE_LABELS[item.type]} 
+              size="small"
+              className="text-[var(--color-violet-300)] bg-[var(--color-violet-500)]/10 border border-[var(--color-violet-500)]/20 font-semibold"
+              sx={{ height: 20, fontSize: '0.65rem' }}
+            />
+          )}
+          {isDashboard && (
+            <Chip 
+              label={STATUS_LABELS[item.status]} 
+              size="small"
+              className={`${STATUS_COLORS[item.status]} shadow-sm font-semibold`}
+              sx={{ height: 20, fontSize: '0.65rem' }}
+            />
+          )}
           {hasNewEpisodes && (
             <Chip 
               icon={<NewReleasesIcon style={{ color: 'white', fontSize: 12 }} />}
@@ -240,26 +240,57 @@ export function MediaCard({ item }: MediaCardProps) {
           </p>
         )}
 
-        {/* Year */}
-        {item.release_year && (
+        {/* Year, Runtime, Pages */}
+        {(item.release_year || item.runtime_minutes || item.total_pages) && (
           <p
-            className="text-xs"
-            style={{ color: "var(--color-lunar-600)" }}
+            className="text-xs flex items-center gap-1.5"
+            style={{ color: "var(--color-lunar-500)" }}
           >
-            {item.release_year}
+            {item.release_year && <span>{item.release_year}</span>}
+            
+            {item.type === "movie" && item.runtime_minutes && (
+              <>
+                {item.release_year && <span className="opacity-50">•</span>}
+                <span>
+                  {Math.floor(item.runtime_minutes / 60)}h {item.runtime_minutes % 60}m
+                </span>
+              </>
+            )}
+
+            {item.type === "book" && item.total_pages && (
+              <>
+                {item.release_year && <span className="opacity-50">•</span>}
+                <span>
+                  {item.pages_read} / {item.total_pages} pg
+                </span>
+              </>
+            )}
           </p>
         )}
 
-        {/* Quick Actions / Rating */}
-        {(isWatchingSeries && !isDashboard) || item.user_rating !== null ? (
-          <div className="pt-2 flex items-center justify-between w-full mt-auto">
+        <div className="flex flex-col mt-auto pt-1 gap-2 w-full">
+          {/* Synopsis Snippet */}
+          {!(item.type === "series" && isWatchingSeries && !isDashboard) && item.synopsis && (
+            <p className="text-[11px] text-[var(--color-lunar-400)] line-clamp-3 sm:line-clamp-4 leading-relaxed">
+              {item.synopsis}
+            </p>
+          )}
+
+          {/* Quick Actions / Rating */}
+          {((isWatchingSeries && !isDashboard) || item.user_rating !== null) && (
+            <div className="flex items-center justify-between w-full">
             {isWatchingSeries && currentS && !isDashboard ? (
-            <div className="flex w-full items-center justify-between bg-[var(--color-lunar-950)] border border-[var(--color-lunar-800)] p-2 rounded-xl">
-              <div className="flex flex-col">
-                <span className="text-[var(--color-lunar-100)] text-xs font-bold leading-tight">
+            <div className="flex w-full items-center justify-between bg-[var(--color-lunar-950)] border border-[var(--color-lunar-800)] p-3 rounded-xl">
+              <div className="flex flex-col overflow-hidden flex-1 mr-2">
+                <span className="text-[var(--color-lunar-100)] text-sm font-bold leading-tight">
                   S{currentS.padStart(2, '0')} E{currentE.toString().padStart(2, '0')}
                 </span>
-                <span className="text-[9px] text-[var(--color-lunar-400)] leading-tight font-medium mt-0.5">
+                {currentEpTitle && (
+                  <span className="text-xs text-[var(--color-lunar-300)] leading-tight truncate w-full mt-0.5">
+                    {currentEpTitle}
+                  </span>
+                )}
+                <span className="text-[11px] text-[var(--color-lunar-500)] leading-tight font-medium mt-1">
                   {seasonLeft} left in season
                 </span>
               </div>
@@ -270,8 +301,8 @@ export function MediaCard({ item }: MediaCardProps) {
                 sx={{ 
                   bgcolor: "var(--color-violet-600)", 
                   color: "white", 
-                  width: 28, 
-                  height: 28,
+                  width: 36, 
+                  height: 36,
                   '&:hover': { bgcolor: "var(--color-violet-500)" },
                   '&:active': { transform: 'scale(0.95)' }
                 }}
@@ -317,7 +348,8 @@ export function MediaCard({ item }: MediaCardProps) {
             </Button>
           )}
         </div>
-        ) : null}
+        )}
+        </div>
       </div>
     </Link>
   </motion.div>

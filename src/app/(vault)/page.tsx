@@ -95,7 +95,7 @@ async function DashboardStats() {
 }
 
 async function RecentItems() {
-  const items = await getRecentlyAdded(12);
+  const items = await getRecentlyAdded(6);
   return (
     <MediaGrid
       items={items}
@@ -108,7 +108,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-10 animate-fade-in">
       {/* Hero header */}
-      <div>
+      <div className="mb-7">
         <div className="flex items-center gap-3 mb-2">
           <AutoAwesomeIcon fontSize="large" sx={{ color: "var(--color-violet-400)" }} />
           <h1
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <section aria-labelledby="stats-heading">
+      <section aria-labelledby="stats-heading" className="mb-7">
         <h2
           id="stats-heading"
           className="text-xs font-semibold uppercase tracking-widest mb-4"
@@ -161,7 +161,7 @@ export default function DashboardPage() {
         <Suspense
           fallback={
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {[...Array(12)].map((_, i) => (
+              {[...Array(6)].map((_, i) => (
                 <MediaCardSkeleton key={i} />
               ))}
             </div>
