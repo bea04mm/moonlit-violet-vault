@@ -33,6 +33,7 @@ export const metadata: Metadata = {
     default: "Moonlit Violet Vault",
     template: "%s · Moonlit Violet Vault",
   },
+  manifest: "/manifest.json",
   description:
     "A personal media vault for movies, TV series, and books — beautifully organised under moonlit violet skies.",
   keywords: ["media tracker", "movies", "books", "tv series", "personal vault"],
