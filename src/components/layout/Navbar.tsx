@@ -45,18 +45,18 @@ export function Navbar() {
         borderColor: "color-mix(in srgb, var(--color-violet-500) 12%, transparent)",
       }}
     >
-      <nav className="max-w-screen-xl w-full mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4" aria-label="Main navigation">
+      <nav className="max-w-screen-xl w-full mx-auto px-4 sm:px-6 h-16 flex items-center gap-4" aria-label="Main navigation">
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 font-display font-bold text-lg hover:opacity-80 transition-opacity flex-shrink-0"
+          className="flex items-center gap-2 font-display font-bold text-lg hover:opacity-80 transition-opacity flex-shrink min-w-0"
           style={{
             color: "var(--color-violet-300)",
             fontFamily: "var(--font-display)",
           }}
         >
-          <NightlightIcon />
-          <span className="hidden sm:block">Moonlit Violet Vault</span>
+          <NightlightIcon className="flex-shrink-0" />
+          <span className="truncate text-base sm:text-lg">Moonlit Violet Vault</span>
         </Link>
 
         {/* Desktop Nav Links */}

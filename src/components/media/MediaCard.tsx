@@ -14,7 +14,6 @@ import {
 } from "@/lib/constants";
 import { Chip, IconButton, Button } from "@mui/material";
 import { formatRating, getCoverPlaceholder } from "@/lib/utils/formatters";
-import { updateMediaProgress } from "@/lib/actions/mediaActions";
 import { useState } from "react";
 import { toast } from "sonner";
 import StarIcon from "@mui/icons-material/Star";
@@ -22,6 +21,9 @@ import CheckIcon from "@mui/icons-material/Check";
 import AddIcon from "@mui/icons-material/Add";
 import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { motion, useAnimation, type PanInfo } from "framer-motion";
+import { updateMediaProgress, deleteMediaFromVault } from "@/lib/actions/mediaActions";
 
 interface MediaCardProps {
   item: MediaItem;
@@ -59,7 +61,9 @@ export function MediaCard({ item }: MediaCardProps) {
     }
   }
 
-  const handleQuickAddEpisode = async (e: React.MouseEvent) => {
+  const controls = useAnimation();
+
+  const handleQuickAddEpisode = async (e: React.MouseEvent | any) => {
     e.preventDefault(); // Prevent navigating to detail page
     e.stopPropagation();
     if (isUpdating) return;
@@ -94,76 +98,133 @@ export function MediaCard({ item }: MediaCardProps) {
     }
   };
 
+  const handleDragEnd = async (e: any, info: PanInfo) => {
+    const threshold = 80;
+    
+    if (info.offset.x > threshold) {
+      // Swipe Right -> Delete
+      controls.start({ x: 0 });
+      handleDelete(e);
+    } else if (info.offset.x < -threshold) {
+      // Swipe Left -> Progress
+      controls.start({ x: 0 });
+      if (isWatchingSeries && currentS) {
+        await handleQuickAddEpisode(e);
+      } else if (item.status === "want_to_watch" || item.status === "want_to_read") {
+        await updateMediaProgress(item.id, { status: item.type === "book" ? "reading" : "watching" });
+        toast.success(`Started ${item.title}!`);
+      }
+    } else {
+      controls.start({ x: 0 });
+    }
+  };
+
+  const handleDelete = async (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm("Delete this item from the Vault?")) {
+      setIsUpdating(true);
+      try {
+        await deleteMediaFromVault(item.id, item.type);
+        toast.success("Item deleted");
+      } catch (err: any) {
+        toast.error("Failed to delete: " + err.message);
+        setIsUpdating(false);
+      }
+    }
+  };
+
   return (
-    <Link
-      href={href}
-      className="group block rounded-3xl overflow-hidden border transition-all duration-300 focus-visible:outline-2 hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)] hover:border-[color-mix(in_srgb,var(--color-violet-500)_35%,transparent)]"
-      style={{
-        background: "var(--color-lunar-900)",
-        borderColor:
-          "color-mix(in srgb, var(--color-violet-500) 15%, transparent)",
-        boxShadow: "var(--shadow-card)",
-      }}
-    >
+    <div className="relative rounded-3xl overflow-hidden touch-pan-y group/container">
+      {/* Background Actions (Revealed on Swipe) */}
+      <div className="absolute inset-0 flex justify-between rounded-3xl bg-[var(--color-lunar-900)]">
+        {/* Left Action (Swipe Right) */}
+        <div className="w-1/2 flex items-center justify-start pl-6">
+          <div className="flex flex-col items-center justify-center text-red-500">
+            <DeleteIcon />
+            <span className="text-[10px] font-semibold mt-1">Delete</span>
+          </div>
+        </div>
+        {/* Right Action (Swipe Left) */}
+        <div className="w-1/2 flex items-center justify-end pr-6">
+          <div className="flex flex-col items-center justify-center text-[var(--color-violet-400)]">
+            <CheckIcon />
+            <span className="text-[10px] font-semibold mt-1">Progress</span>
+          </div>
+        </div>
+      </div>
+
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.4}
+        onDragEnd={handleDragEnd}
+        animate={controls}
+        className="w-full h-full relative z-10"
+      >
+        <Link
+          href={href}
+          className="group flex flex-row h-full rounded-3xl overflow-hidden border transition-all duration-300 focus-visible:outline-2 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] border-[color-mix(in_srgb,var(--color-violet-500)_15%,transparent)] hover:border-[color-mix(in_srgb,var(--color-violet-500)_35%,transparent)] bg-[var(--color-lunar-950)]"
+        >
       {/* Cover image */}
-      <div className="relative w-full aspect-[2/3] overflow-hidden">
+      <div className="relative w-28 sm:w-32 shrink-0 aspect-[2/3] overflow-hidden">
         <Image
           src={coverSrc}
           alt={`Cover for ${item.title}`}
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          sizes="128px"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
           }}
         />
 
         {/* Top overlay gradient to ensure badges are readable on light/white covers */}
-        <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/70 to-transparent z-0 pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/70 to-transparent z-0 pointer-events-none" />
 
-        {/* Top-left: Status badge */}
+        {/* Top-left: Media type badge */}
         <div className="absolute top-2 left-2 z-10">
-          <Chip 
-            label={STATUS_LABELS[item.status]} 
-            size="small"
-            className={`${STATUS_COLORS[item.status]} shadow-md backdrop-blur-sm bg-black/40 font-semibold`}
-            sx={{ height: 24, fontSize: '0.7rem' }}
-          />
-        </div>
-
-        {/* Top-right: Media type badge */}
-        <div className="absolute top-2 right-2 flex flex-col gap-2 items-end z-10">
           <Chip 
             label={TYPE_LABELS[item.type]} 
             size="small"
             className="text-[var(--color-violet-300)] bg-[var(--color-violet-500)]/10 border border-[var(--color-violet-500)]/20 shadow-md backdrop-blur-sm bg-black/40 font-semibold"
-            sx={{ height: 24, fontSize: '0.7rem' }}
+            sx={{ height: 20, fontSize: '0.65rem' }}
           />
-          {hasNewEpisodes && (
-            <Chip 
-              icon={<NewReleasesIcon style={{ color: 'white', fontSize: 14 }} />}
-              label="New Episodes"
-              size="small"
-              className="bg-red-500/90 text-white shadow-sm shadow-red-500/20 border-red-500 animate-pulse font-bold"
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {isWaitingSeries && item.next_episode_air_date && (
-            <Chip 
-              icon={<CalendarMonthIcon style={{ color: 'white', fontSize: 14 }} />}
-              label={new Date(item.next_episode_air_date).toLocaleDateString()}
-              size="small"
-              className="bg-[var(--color-starlight-600)]/90 text-white shadow-sm border-[var(--color-starlight-500)] font-bold"
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
         </div>
       </div>
 
       {/* Card body */}
-      <div className="p-4 space-y-2">
+      <div className="p-4 flex-1 flex flex-col justify-center gap-1">
+        {/* Top badges for status & new episodes */}
+        <div className="flex flex-wrap items-center gap-2 mb-1">
+          <Chip 
+            label={STATUS_LABELS[item.status]} 
+            size="small"
+            className={`${STATUS_COLORS[item.status]} shadow-sm font-semibold`}
+            sx={{ height: 20, fontSize: '0.65rem' }}
+          />
+          {hasNewEpisodes && (
+            <Chip 
+              icon={<NewReleasesIcon style={{ color: 'white', fontSize: 12 }} />}
+              label="New Episodes"
+              size="small"
+              className="bg-red-500/90 text-white shadow-sm shadow-red-500/20 border-red-500 animate-pulse font-bold"
+              sx={{ height: 20, fontSize: '0.65rem' }}
+            />
+          )}
+          {isWaitingSeries && item.next_episode_air_date && (
+            <Chip 
+              icon={<CalendarMonthIcon style={{ color: 'white', fontSize: 12 }} />}
+              label={new Date(item.next_episode_air_date).toLocaleDateString()}
+              size="small"
+              className="bg-[var(--color-starlight-600)]/90 text-white shadow-sm border-[var(--color-starlight-500)] font-bold"
+              sx={{ height: 20, fontSize: '0.65rem' }}
+            />
+          )}
+        </div>
+
         {/* Title */}
         <h3
-          className="font-semibold text-sm leading-tight line-clamp-2"
+          className="font-semibold text-base leading-tight line-clamp-2"
           style={{ color: "var(--color-lunar-100)" }}
         >
           {item.title}
@@ -259,5 +320,7 @@ export function MediaCard({ item }: MediaCardProps) {
         ) : null}
       </div>
     </Link>
+  </motion.div>
+</div>
   );
 }

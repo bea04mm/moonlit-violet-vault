@@ -1,9 +1,10 @@
 // src/components/media/TabbedDashboard.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { MediaItem, MediaType } from "@/lib/supabase/database.types";
 import { MediaGrid } from "./MediaGrid";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface TabbedDashboardProps {
   type: MediaType;
@@ -51,47 +52,72 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
 
   const [activeTabId, setActiveTabId] = useState(activeTabs[0].id);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"date_added" | "title" | "release_year" | "user_rating">("date_added");
 
   const activeTab = activeTabs.find((t) => t.id === activeTabId) || activeTabs[0];
-  let filteredItems = items.filter(activeTab.filterFn);
 
-  // Extract tags from the current tab's items
-  const availableTags = Array.from(new Set(filteredItems.flatMap((item) => item.tags || []))).sort();
+  const filteredItems = useMemo(() => {
+    let result = items.filter(activeTab.filterFn);
 
-  // Apply tag filter if any selected
-  if (selectedTags.length > 0) {
-    filteredItems = filteredItems.filter((item) =>
-      selectedTags.every((t) => (item.tags || []).includes(t))
-    );
-  }
+    if (selectedTags.length > 0) {
+      result = result.filter((item) =>
+        selectedTags.every((t) => (item.tags || []).includes(t))
+      );
+    }
+
+    return result.sort((a, b) => {
+      if (sortBy === "title") return a.title.localeCompare(b.title);
+      if (sortBy === "release_year") return (b.release_year || 0) - (a.release_year || 0);
+      if (sortBy === "user_rating") return (b.user_rating || 0) - (a.user_rating || 0);
+      return new Date(b.date_added).getTime() - new Date(a.date_added).getTime(); // default: newest first
+    });
+  }, [items, activeTab, selectedTags, sortBy]);
+
+  // Extract tags from the current tab's items (before filtering by tags)
+  const availableTags = Array.from(new Set(items.filter(activeTab.filterFn).flatMap((item) => item.tags || []))).sort();
 
   return (
     <div className="flex flex-col gap-8 w-full">
-      {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-[var(--color-lunar-800)] pb-4">
-        {activeTabs.map((tab) => {
-          const count = items.filter(tab.filterFn).length;
-          const isActive = activeTabId === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTabId(tab.id);
-                setSelectedTags([]); // Clear tags on tab switch
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                isActive
-                  ? "bg-[var(--color-violet-500)] text-white shadow-[var(--shadow-glow-sm)] shadow-[var(--color-violet-500)]"
-                  : "bg-[var(--color-lunar-900)] text-[var(--color-lunar-400)] hover:bg-[var(--color-lunar-800)] hover:text-[var(--color-lunar-200)]"
-              }`}
-            >
-              {tab.label}
-              <span className={`px-2 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-[var(--color-lunar-800)] text-[var(--color-lunar-500)]"}`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
+      {/* Header Row: Tabs + Sort */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-lunar-800)] pb-4">
+        {/* Tab Navigation */}
+        <div className="flex flex-wrap gap-2">
+          {activeTabs.map((tab) => {
+            const count = items.filter(tab.filterFn).length;
+            const isActive = activeTabId === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTabId(tab.id);
+                  setSelectedTags([]); // Clear tags on tab switch
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                  isActive
+                    ? "bg-[var(--color-violet-500)] text-white shadow-[var(--shadow-glow-sm)] shadow-[var(--color-violet-500)]"
+                    : "bg-[var(--color-lunar-900)] text-[var(--color-lunar-400)] hover:bg-[var(--color-lunar-800)] hover:text-[var(--color-lunar-200)]"
+                }`}
+              >
+                {tab.label}
+                <span className={`px-2 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-[var(--color-lunar-800)] text-[var(--color-lunar-500)]"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sorting Dropdown */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as any)}
+          className="bg-[var(--color-lunar-900)] text-[var(--color-lunar-200)] text-sm rounded-xl px-4 py-2 border border-[var(--color-lunar-800)] focus:outline-none focus:border-[var(--color-violet-500)] cursor-pointer"
+        >
+          <option value="date_added">Recently Added</option>
+          <option value="title">Title (A-Z)</option>
+          <option value="release_year">Release Year (Newest)</option>
+          <option value="user_rating">My Rating (Highest)</option>
+        </select>
       </div>
 
       {/* Tag Filters */}
@@ -121,9 +147,18 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
       )}
 
       {/* Tab Content */}
-      <div className="animate-fade-in" key={activeTabId}>
-        <MediaGrid items={filteredItems} emptyMessage={`No items in "${activeTab.label}".`} />
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTabId}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+          className="w-full"
+        >
+          <MediaGrid items={filteredItems} emptyMessage={`No items in "${activeTab.label}".`} />
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
