@@ -4,12 +4,44 @@ import { useState } from "react";
 import Papa from "papaparse";
 import { Button } from "@mui/material";
 import { importGoodreadsBatch } from "@/lib/actions/importActions";
+import { extractTitlesFromImage } from "@/lib/actions/ocrActions";
 import { toast } from "sonner";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 
 export default function ImportPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractedTitles, setExtractedTitles] = useState<string[]>([]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsExtracting(true);
+    setExtractedTitles([]);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      const res = await extractTitlesFromImage(base64, file.type, "movie or book");
+      
+      if (res.success && res.titles) {
+        setExtractedTitles(res.titles);
+        toast.success(`Extracted ${res.titles.length} titles`);
+      } else {
+        toast.error(res.error || "Failed to extract titles");
+      }
+      setIsExtracting(false);
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read image file");
+      setIsExtracting(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,40 +132,83 @@ export default function ImportPage() {
         </p>
       </div>
 
-      <div className="glass-card p-12 lg:p-24 rounded-3xl border-2 border-dashed border-[var(--color-lunar-800)] flex flex-col items-center justify-center gap-4 text-center mt-8 hover:border-[var(--color-violet-500)] transition-colors bg-[var(--color-lunar-950)]/50">
-        <div className="w-20 h-20 rounded-full bg-[var(--color-violet-500)]/10 flex items-center justify-center text-[var(--color-violet-400)] mb-4">
-          <FileUploadIcon sx={{ fontSize: 40 }} />
-        </div>
-        <h2 className="text-2xl font-bold text-[var(--color-lunar-50)]">Goodreads CSV</h2>
-        <p className="text-[var(--color-lunar-400)] max-w-md">
-          Export the library from Goodreads (My Books &gt; Import and export &gt; Export Library) and upload the CSV here.
-        </p>
-        
-        <div className="mt-4">
-          <Button 
-            component="label"
-            variant="contained" 
-            disabled={isUploading}
-            sx={{ bgcolor: "var(--color-violet-600)", '&:hover': { bgcolor: "var(--color-violet-500)" } }}
-          >
-            {isUploading ? `Importing... ${progress}%` : "Select CSV File"}
-            <input
-              type="file"
-              hidden
-              accept=".csv"
-              onChange={handleFileUpload}
-            />
-          </Button>
-        </div>
-        
-        {isUploading && (
-          <div className="w-full max-w-xs mt-4 h-1.5 bg-[var(--color-lunar-900)] rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-[var(--color-violet-500)] transition-all duration-300" 
-              style={{ width: `${progress}%` }} 
-            />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+        {/* Screenshot OCR */}
+        <div className="glass-card p-8 lg:p-12 rounded-3xl border-2 border-dashed border-[var(--color-lunar-800)] flex flex-col items-center justify-center gap-4 text-center hover:border-[var(--color-violet-500)] transition-colors bg-[var(--color-lunar-950)]/50">
+          <div className="w-16 h-16 rounded-full bg-[var(--color-violet-500)]/10 flex items-center justify-center text-[var(--color-violet-400)] mb-2">
+            <PhotoCameraIcon sx={{ fontSize: 32 }} />
           </div>
-        )}
+          <h2 className="text-xl font-bold text-[var(--color-lunar-50)]">Screenshot OCR</h2>
+          <p className="text-sm text-[var(--color-lunar-400)] max-w-sm">
+            Drop an image from Instagram or Letterboxd. AI will extract the titles automatically.
+          </p>
+          
+          <div className="mt-4">
+            <Button 
+              component="label"
+              variant="contained" 
+              disabled={isExtracting}
+              sx={{ bgcolor: "var(--color-violet-600)", '&:hover': { bgcolor: "var(--color-violet-500)" }, color: "white", borderRadius: '999px', textTransform: 'none', px: 4, fontWeight: 'bold' }}
+            >
+              {isExtracting ? "Extracting..." : "Select Image"}
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleImageUpload}
+              />
+            </Button>
+          </div>
+          
+          {extractedTitles.length > 0 && (
+            <div className="w-full max-w-xs mt-4 text-left">
+              <p className="text-xs text-[var(--color-violet-400)] font-bold uppercase mb-2">Extracted Titles</p>
+              <ul className="text-sm text-white bg-[var(--color-lunar-900)] p-3 rounded-xl border border-[var(--color-lunar-800)] max-h-32 overflow-y-auto">
+                {extractedTitles.map((t, i) => (
+                  <li key={i} className="mb-1 last:mb-0 border-b border-[var(--color-lunar-800)] last:border-0 pb-1 last:pb-0">{t}</li>
+                ))}
+              </ul>
+              <p className="text-xs text-[var(--color-lunar-500)] mt-2 italic">Use the command palette (Ctrl+K) or search bars to add these to your vault.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Goodreads CSV */}
+        <div className="glass-card p-8 lg:p-12 rounded-3xl border-2 border-dashed border-[var(--color-lunar-800)] flex flex-col items-center justify-center gap-4 text-center hover:border-[var(--color-blossom-500)] transition-colors bg-[var(--color-lunar-950)]/50">
+          <div className="w-16 h-16 rounded-full bg-[var(--color-blossom-500)]/10 flex items-center justify-center text-[var(--color-blossom-400)] mb-2">
+            <FileUploadIcon sx={{ fontSize: 32 }} />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--color-lunar-50)]">Goodreads CSV</h2>
+          <p className="text-sm text-[var(--color-lunar-400)] max-w-sm">
+            Export the library from Goodreads and upload the CSV here to automatically sync your vault.
+          </p>
+          
+          <div className="mt-4">
+            <Button 
+              component="label"
+              variant="contained" 
+              disabled={isUploading}
+              sx={{ bgcolor: "var(--color-blossom-500)", '&:hover': { bgcolor: "var(--color-blossom-400)" }, color: "white", borderRadius: '999px', textTransform: 'none', px: 4, fontWeight: 'bold' }}
+            >
+              {isUploading ? `Importing... ${progress}%` : "Select CSV"}
+              <input
+                type="file"
+                hidden
+                accept=".csv"
+                onChange={handleFileUpload}
+              />
+            </Button>
+          </div>
+          
+          {isUploading && (
+            <div className="w-full max-w-xs mt-4 h-1.5 bg-[var(--color-lunar-900)] rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-[var(--color-blossom-500)] transition-all duration-300" 
+                style={{ width: `${progress}%` }} 
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
