@@ -38,7 +38,7 @@ export default function MoviesPage() {
           </h1>
         </div>
         <p className="text-sm" style={{ color: "var(--color-lunar-500)" }}>
-          My cinematic collection.
+          Cinematic collection.
         </p>
       </div>
 

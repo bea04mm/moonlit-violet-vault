@@ -36,7 +36,7 @@ export default function SeriesPage() {
           </h1>
         </div>
         <p className="text-sm" style={{ color: "var(--color-lunar-500)" }}>
-          Every show you&apos;ve loved (or want to).
+          Television collection.
         </p>
       </div>
 

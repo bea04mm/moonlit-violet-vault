@@ -8,7 +8,7 @@ import NightlightIcon from "@mui/icons-material/Nightlight";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 
 export const metadata: Metadata = {
-  title: "Sign In · Moonlit Violet Vault",
+  title: "Sign In",
   description: "Sign in to access the personal media vault.",
 };
 

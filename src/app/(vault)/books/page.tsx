@@ -36,7 +36,7 @@ export default function BooksPage() {
           </h1>
         </div>
         <p className="text-sm" style={{ color: "var(--color-lunar-500)" }}>
-          All the worlds you&apos;ve lived through.
+          Literary collection.
         </p>
       </div>
 
