@@ -175,9 +175,8 @@ export function MediaCard({ item }: MediaCardProps) {
           alt={`Cover for ${item.title}`}
           fill
           sizes="128px"
+          unoptimized={coverSrc.includes("placehold.co")}
           className="object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => {
-          }}
         />
 
       </div>
@@ -272,7 +271,7 @@ export function MediaCard({ item }: MediaCardProps) {
           {/* Synopsis Snippet */}
           {!(item.type === "series" && isWatchingSeries && !isDashboard) && item.synopsis && (
             <p className="text-[11px] text-[var(--color-lunar-400)] line-clamp-3 sm:line-clamp-4 leading-relaxed">
-              {item.synopsis}
+              {item.synopsis.replace(/[*_#~`>]/g, "")}
             </p>
           )}
 

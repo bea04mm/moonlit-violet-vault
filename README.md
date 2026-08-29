@@ -26,11 +26,13 @@
 | 🎬 **Movie Tracker** | Browse, filter and rate your movie collection |
 | 📺 **Series Tracker** | Track ongoing and completed TV series with episode-level precision |
 | 📚 **Book Vault** | Import from Goodreads CSV with full metadata enrichment |
+| 🪄 **In-App Import** | Upload Goodreads CSVs directly in the browser with real-time progress |
+| 🔍 **Smart Match Fixer** | Manually fix bad API matches with Google Books + OpenLibrary fallbacks |
 | 📸 **Screenshot OCR** | Drop an Instagram screenshot → AI extracts media titles automatically |
 | 📱 **Progressive Web App** | Install natively on iOS, Android, and Desktop with offline support |
 | ⚡ **Command Palette** | Press `Ctrl+K` for global instant search and navigation |
 | 🤏 **Native Gestures** | Horizontal list layout with iOS-style swipe actions (Swipe to delete/progress) |
-| 🌙 **Violet Aesthetic** | Soft violet/lilac/lunar dark-mode design with glassmorphism |
+| 🌙 **Violet Aesthetic** | Soft violet/lilac/lunar dark-mode design with glassmorphism and Markdown support |
 | 🔒 **Private Vault** | Google OAuth + email whitelist — only you can enter |
 | 🐳 **Docker Ready** | Consistent dev & production environments |
 
@@ -49,7 +51,7 @@
 ### Backend / Data Pipeline
 - **Python 3.12** — modular CLI pipeline
 - **[TMDB API](https://developer.themoviedb.org/)** — movie & series metadata
-- **[Google Books API](https://developers.google.com/books)** — book metadata and covers
+- **[Google Books API](https://developers.google.com/books)** & **[OpenLibrary](https://openlibrary.org/)** — book metadata, descriptions (React-Markdown rendered), and covers
 - **[Google Gemini Vision](https://ai.google.dev/)** / **[OpenAI GPT-4o Vision](https://platform.openai.com/)** — OCR title extraction from screenshots
 - **Pandas** — Goodreads CSV processing
 - **[Supabase Python](https://supabase.com/docs/reference/python/)** — database writes
@@ -207,6 +209,9 @@ The Python pipeline lives in `data_pipeline/` and has three commands:
 
 ### Import from Goodreads
 
+**Preferred Method:** You can now upload your Goodreads `library.csv` directly in the Web UI via the **Import Data** page (`/import`)! The app will parse, deduplicate, and fetch Google Books / OpenLibrary covers instantly.
+
+*Alternatively, via Python CLI:*
 Export your library from Goodreads: *My Books → Export library* (downloads `library.csv`)
 
 ```bash
