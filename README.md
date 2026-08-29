@@ -24,9 +24,12 @@
 | Feature | Description |
 |---|---|
 | 🎬 **Movie Tracker** | Browse, filter and rate your movie collection |
-| 📺 **Series Tracker** | Track ongoing and completed TV series |
+| 📺 **Series Tracker** | Track ongoing and completed TV series with episode-level precision |
 | 📚 **Book Vault** | Import from Goodreads CSV with full metadata enrichment |
 | 📸 **Screenshot OCR** | Drop an Instagram screenshot → AI extracts media titles automatically |
+| 📱 **Progressive Web App** | Install natively on iOS, Android, and Desktop with offline support |
+| ⚡ **Command Palette** | Press `Ctrl+K` for global instant search and navigation |
+| 🤏 **Native Gestures** | Horizontal list layout with iOS-style swipe actions (Swipe to delete/progress) |
 | 🌙 **Violet Aesthetic** | Soft violet/lilac/lunar dark-mode design with glassmorphism |
 | 🔒 **Private Vault** | Google OAuth + email whitelist — only you can enter |
 | 🐳 **Docker Ready** | Consistent dev & production environments |
