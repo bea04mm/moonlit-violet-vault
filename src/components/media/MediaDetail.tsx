@@ -13,6 +13,7 @@ import { formatRating, getCoverPlaceholder } from "@/lib/utils/formatters";
 import Link from "next/link";
 import { ProgressLogger } from "./ProgressLogger";
 import { DeleteButton } from "./DeleteButton";
+import { BookMatchFixer } from "./BookMatchFixer";
 import { updateMediaProgress } from "@/lib/actions/mediaActions";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -21,6 +22,7 @@ import RateReviewIcon from "@mui/icons-material/RateReview";
 import AutoStoriesIcon from "@mui/icons-material/AutoStories";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ReactMarkdown from "react-markdown";
 
 interface MediaDetailProps {
   item: MediaItem;
@@ -96,6 +98,8 @@ export function MediaDetail({ item }: MediaDetailProps) {
             </div>
             {isFavorite ? "Favorited" : "Add to Favorites"}
           </button>
+          
+          {item.type === "book" && <BookMatchFixer item={item} />}
         </div>
 
         {/* Right Column: Details */}
@@ -225,11 +229,20 @@ export function MediaDetail({ item }: MediaDetailProps) {
               <div className="animate-fade-in space-y-10">
                 {/* Synopsis */}
                 {item.synopsis && (
-                  <div className="prose prose-invert max-w-none">
+                  <div className="max-w-none">
                     <h3 className="text-lg font-semibold text-[var(--color-lunar-200)] mb-2">Synopsis</h3>
-                    <p className="text-[var(--color-lunar-400)] leading-relaxed">
-                      {item.synopsis}
-                    </p>
+                    <div className="text-[var(--color-lunar-400)] leading-relaxed text-sm md:text-base">
+                      <ReactMarkdown
+                        components={{
+                          p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />,
+                          strong: ({node, ...props}) => <strong className="text-[var(--color-lunar-100)] font-bold" {...props} />,
+                          em: ({node, ...props}) => <em className="text-[var(--color-violet-300)] italic" {...props} />,
+                          br: ({node, ...props}) => <br {...props} />,
+                        }}
+                      >
+                        {item.synopsis}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 )}
 

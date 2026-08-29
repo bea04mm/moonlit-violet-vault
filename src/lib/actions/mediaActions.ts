@@ -330,3 +330,69 @@ export async function syncSeriesSeasons(id: string, tmdbId: number): Promise<voi
 
   revalidatePath("/", "layout");
 }
+
+async function searchOpenLibrary(query: string) {
+  try {
+    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=5`, { cache: 'no-store' });
+    const data = await res.json();
+    if (!data.docs) return [];
+    
+    // Fetch full descriptions in parallel from the Works API
+    const docsWithDesc = await Promise.all(data.docs.map(async (doc: any) => {
+      let description = doc.first_sentence ? doc.first_sentence[0] : "";
+      try {
+        if (doc.key) {
+          const workRes = await fetch(`https://openlibrary.org${doc.key}.json`, { cache: 'no-store' });
+          if (workRes.ok) {
+            const workData = await workRes.json();
+            if (workData.description) {
+              description = typeof workData.description === 'string' 
+                ? workData.description 
+                : workData.description.value || description;
+            }
+          }
+        }
+      } catch (e) {
+        // ignore errors for individual description fetches
+      }
+      return { ...doc, full_description: description };
+    }));
+
+    // Map OpenLibrary to Google Books format for seamless UI integration
+    return docsWithDesc.map((doc: any) => ({
+      id: doc.key,
+      volumeInfo: {
+        title: doc.title,
+        authors: doc.author_name,
+        publishedDate: doc.first_publish_year?.toString(),
+        description: doc.full_description,
+        categories: doc.subject?.slice(0, 3) || [],
+        pageCount: doc.number_of_pages_median,
+        imageLinks: doc.cover_i ? {
+          thumbnail: `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`,
+          smallThumbnail: `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
+        } : null
+      }
+    }));
+  } catch (err) {
+    console.error("OpenLibrary fallback failed", err);
+    return [];
+  }
+}
+
+export async function searchGoogleBooks(query: string) {
+  try {
+    const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10${apiKey ? `&key=${apiKey}` : ""}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      console.warn("Google Books API quota exceeded or failed. Falling back to OpenLibrary...");
+      return await searchOpenLibrary(query);
+    }
+    const data = await res.json();
+    return data.items || [];
+  } catch (error) {
+    console.warn("Failed to search Google Books, trying OpenLibrary...", error);
+    return await searchOpenLibrary(query);
+  }
+}
