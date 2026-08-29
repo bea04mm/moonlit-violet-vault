@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import {
   PieChart,
   Pie,
@@ -42,10 +44,32 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export function AnalyticsCharts({ data }: Props) {
+  const currentYear = new Date().getFullYear();
+
   return (
     <div className="space-y-6 animate-fade-in">
+      
+      {/* Vault Wrapped Launcher */}
+      <Link href={`/wrapped?year=${currentYear}`} className="block">
+        <div className="glass-card rounded-3xl p-6 sm:p-8 border-2 border-[var(--color-violet-500)]/30 bg-gradient-to-r from-[var(--color-violet-900)]/20 to-[var(--color-starlight-900)]/10 flex items-center justify-between group hover:border-[var(--color-violet-500)] transition-all overflow-hidden relative shadow-[0_0_30px_rgba(157,77,255,0.1)] hover:shadow-[0_0_50px_rgba(157,77,255,0.2)]">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-violet-500)]/10 blur-[80px] rounded-full transform translate-x-1/2 -translate-y-1/2" />
+          <div className="relative z-10 flex flex-col">
+            <h2 className="text-2xl sm:text-3xl font-display font-bold text-white flex items-center gap-2">
+              <AutoAwesomeIcon sx={{ color: "var(--color-violet-400)" }} /> 
+              {currentYear} Vault Wrapped
+            </h2>
+            <p className="text-[var(--color-lunar-300)] mt-2 max-w-sm">
+              Discover your top genres, favorite titles, and how much time you spent escaping reality this year.
+            </p>
+          </div>
+          <div className="relative z-10 hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-[var(--color-violet-600)] text-white group-hover:scale-110 transition-transform">
+            <span className="font-bold text-xl">→</span>
+          </div>
+        </div>
+      </Link>
+
       {/* Time Invested Row */}
-      <section>
+      <section className="pt-4">
         <h2 className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--color-lunar-600)" }}>
           Time Invested
         </h2>

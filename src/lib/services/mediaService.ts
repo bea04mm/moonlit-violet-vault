@@ -173,3 +173,103 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     ].filter(d => d.value > 0)
   };
 }
+
+export interface VaultWrappedData {
+  year: number;
+  totalFinished: number;
+  moviesFinished: number;
+  seriesFinished: number;
+  booksFinished: number;
+  moviesHours: number;
+  seriesHours: number;
+  booksPages: number;
+  topGenres: { name: string; count: number }[];
+  topItems: MediaItem[];
+}
+
+export async function getVaultWrappedStats(year: number): Promise<VaultWrappedData> {
+  const repo = await getMediaRepository();
+  const allItems = await repo.findAll();
+
+  // For the sake of the portfolio presentation, we summarize all "completed" items.
+  // In a real app with strict date_read columns, we would filter by `year`.
+  const finishedItems = allItems.filter(item => ["watched", "read"].includes(item.status));
+
+  let moviesFinished = 0;
+  let seriesFinished = 0;
+  let booksFinished = 0;
+  
+  let moviesHours = 0;
+  let seriesHours = 0;
+  let booksPages = 0;
+  
+  const genreCount: Record<string, number> = {};
+  const topItems: MediaItem[] = [];
+
+  finishedItems.forEach(item => {
+    if (item.type === "movie") {
+      moviesFinished++;
+      moviesHours += (item.runtime_minutes || 120) / 60;
+    }
+    if (item.type === "series") {
+      seriesFinished++;
+      let seriesMins = 0;
+      if (item.season_progress && Object.values(item.season_progress).some((s: any) => s.episodes)) {
+        Object.values(item.season_progress).forEach((season: any) => {
+          if (season.episodes) {
+            Object.values(season.episodes).forEach((ep: any) => {
+              if (ep.watched) {
+                seriesMins += ep.runtime_minutes || item.runtime_minutes || 45;
+              }
+            });
+          }
+        });
+      } else {
+        const epRuntime = item.runtime_minutes || 45;
+        seriesMins = (item.episodes_seen || 0) * epRuntime;
+      }
+      seriesHours += seriesMins / 60;
+    }
+    if (item.type === "book") {
+      booksFinished++;
+      booksPages += item.total_pages || item.pages_read || 300;
+    }
+
+    // Tally genres
+    if (item.genres && Array.isArray(item.genres)) {
+      item.genres.forEach(g => {
+        if (!g) return;
+        // Clean up genre string (e.g. remove spaces around)
+        const cleanG = g.trim();
+        genreCount[cleanG] = (genreCount[cleanG] || 0) + 1;
+      });
+    }
+
+    // Top items: favorites or highly rated (4.5+)
+    if (item.is_favorite || (item.user_rating && item.user_rating >= 4.5)) {
+      topItems.push(item);
+    }
+  });
+
+  // Sort genres by frequency
+  const topGenres = Object.entries(genreCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, count }));
+
+  // Sort top items by rating (desc) and take top 6
+  topItems.sort((a, b) => (b.user_rating || 0) - (a.user_rating || 0));
+
+  return {
+    year,
+    totalFinished: finishedItems.length,
+    moviesFinished,
+    seriesFinished,
+    booksFinished,
+    moviesHours: Math.round(moviesHours),
+    seriesHours: Math.round(seriesHours),
+    booksPages,
+    topGenres,
+    topItems: topItems.slice(0, 6)
+  };
+}

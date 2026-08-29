@@ -30,7 +30,7 @@ export default function ImportPage() {
           const yearRaw = parseInt(row["Original Publication Year"] || "0", 10);
           const releaseYear = yearRaw > 0 ? yearRaw : null;
           
-          let status = "want_to_read";
+          let status: "read" | "reading" | "want_to_read" = "want_to_read";
           const shelf = row["Exclusive Shelf"] || "";
           if (shelf === "read") status = "read";
           if (shelf === "currently-reading") status = "reading";
@@ -54,7 +54,7 @@ export default function ImportPage() {
             pages_read: pagesRead,
             date_completed: row["Date Read"] || null,
             date_added: row["Date Added"] || null,
-            ingestion_source: "goodreads_csv",
+            ingestion_source: "goodreads_csv" as const,
           };
         }).filter(item => item.title);
 
