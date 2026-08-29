@@ -10,6 +10,7 @@ import TvIcon from "@mui/icons-material/Tv";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import HomeIcon from "@mui/icons-material/Home";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
 import { getAllMediaAction } from "@/lib/actions/mediaActions";
 import type { MediaItem } from "@/lib/supabase/database.types";
 import { getCoverPlaceholder } from "@/lib/utils/formatters";
@@ -64,6 +65,7 @@ export function CommandPalette() {
       { type: "nav", id: "nav-movies", label: "Movies", icon: <MovieIcon />, path: "/movies" },
       { type: "nav", id: "nav-series", label: "Series", icon: <TvIcon />, path: "/series" },
       { type: "nav", id: "nav-books", label: "Books", icon: <MenuBookIcon />, path: "/books" },
+      { type: "nav", id: "nav-import", label: "Import Data", icon: <FileUploadIcon />, path: "/import" },
       { type: "nav", id: "nav-analytics", label: "Analytics", icon: <BarChartIcon />, path: "/analytics" },
     ];
   } else {

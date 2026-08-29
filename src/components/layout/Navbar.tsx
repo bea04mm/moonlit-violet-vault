@@ -10,6 +10,7 @@ import { AddMediaButton } from "@/components/media/AddMediaButton";
 import MovieIcon from "@mui/icons-material/Movie";
 import TvIcon from "@mui/icons-material/Tv";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import NightlightIcon from "@mui/icons-material/Nightlight";
 import SearchIcon from "@mui/icons-material/Search";
@@ -19,6 +20,7 @@ const NAV_LINKS = [
   { href: "/movies", label: "Movies", icon: <MovieIcon fontSize="small" /> },
   { href: "/series", label: "Series", icon: <TvIcon fontSize="small" /> },
   { href: "/books", label: "Books", icon: <MenuBookIcon fontSize="small" /> },
+  { href: "/import", label: "Import", icon: <FileUploadIcon fontSize="small" /> },
   { href: "/analytics", label: "Analytics", icon: <BarChartIcon fontSize="small" /> },
 ];
 
