@@ -4,6 +4,7 @@
 
 import { Navbar } from "@/components/layout/Navbar";
 import { AutoSyncTrigger } from "@/components/AutoSyncTrigger";
+import { AddMediaButton } from "@/components/media/AddMediaButton";
 import { Toaster } from "sonner";
 
 export default function VaultLayout({
@@ -18,6 +19,7 @@ export default function VaultLayout({
       <main className="flex-1 max-w-screen-xl mx-auto w-full px-4 sm:px-6 py-8">
         {children}
       </main>
+      <AddMediaButton />
       <Toaster 
         theme="dark" 
         position="bottom-right" 

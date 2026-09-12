@@ -6,7 +6,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignOutButton } from "@/components/auth/SignOutButton";
-import { AddMediaButton } from "@/components/media/AddMediaButton";
 import MovieIcon from "@mui/icons-material/Movie";
 import TvIcon from "@mui/icons-material/Tv";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
@@ -111,7 +110,6 @@ export function Navbar() {
             <SearchIcon />
           </IconButton>
 
-          <AddMediaButton />
           <SignOutButton />
         </div>
       </nav>
