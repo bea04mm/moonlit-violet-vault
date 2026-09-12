@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { Button } from "@mui/material";
 import { importGoodreadsBatch } from "@/lib/actions/importActions";
@@ -8,33 +8,87 @@ import { extractTitlesFromImage } from "@/lib/actions/ocrActions";
 import { toast } from "sonner";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 export default function ImportPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isUploading) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isUploading]);
+
   const [isExtracting, setIsExtracting] = useState(false);
-  const [extractedTitles, setExtractedTitles] = useState<string[]>([]);
+  const [extractedTitles, setExtractedTitles] = useState<Array<{title: string, type: string, status?: string}>>([]);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [isDraggingCSV, setIsDraggingCSV] = useState(false);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processImage = async (file: File) => {
     setIsExtracting(true);
     setExtractedTitles([]);
 
     const reader = new FileReader();
     reader.onload = async () => {
-      const base64 = reader.result as string;
-      const res = await extractTitlesFromImage(base64, file.type, "movie or book");
-      
-      if (res.success && res.titles) {
-        setExtractedTitles(res.titles);
-        toast.success(`Extracted ${res.titles.length} titles`);
-      } else {
-        toast.error(res.error || "Failed to extract titles");
+      try {
+        const base64 = reader.result as string;
+        
+        if (base64.length > 4_000_000) {
+          toast.error("Image is too large (max ~3MB). Please crop or compress it.");
+          setIsExtracting(false);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("image", base64);
+        formData.append("mimeType", file.type);
+        formData.append("mediaType", "movie or book");
+
+        const res = await extractTitlesFromImage(formData);
+        
+        if (res.success && res.titles) {
+          // Initialize list with pending status
+          const items = res.titles.map((t: any) => ({ 
+            title: t.title || t, 
+            type: t.type || "movie", 
+            status: "pending" 
+          }));
+          setExtractedTitles(items);
+          toast.success(`Extracted ${items.length} titles. Ingesting...`);
+          
+          // Auto ingest sequentially
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "loading" } : p));
+            
+            try {
+              const { ingestExtractedTitle } = await import("@/lib/actions/ocrActions");
+              const ingestRes = await ingestExtractedTitle(item.title, item.type as any);
+              if (ingestRes.success) {
+                setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "success" } : p));
+              } else {
+                setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "failed" } : p));
+              }
+            } catch (err) {
+              setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "failed" } : p));
+            }
+          }
+          toast.success("Ingestion complete!");
+        } else {
+          toast.error(res.error || "Failed to extract titles");
+        }
+      } catch (err: any) {
+        toast.error("Server error: " + (err.message || "Unknown error"));
+      } finally {
+        setIsExtracting(false);
       }
-      setIsExtracting(false);
     };
     reader.onerror = () => {
       toast.error("Failed to read image file");
@@ -43,10 +97,12 @@ export default function ImportPage() {
     reader.readAsDataURL(file);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) processImage(file);
+  };
 
+  const processCSV = (file: File) => {
     setIsUploading(true);
     setProgress(0);
 
@@ -115,6 +171,70 @@ export default function ImportPage() {
     });
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processCSV(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnterImage = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleDragLeaveImage = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleDragEnterCSV = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCSV(true);
+  };
+
+  const handleDragLeaveCSV = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCSV(false);
+  };
+
+  const handleImageDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+    
+    if (isExtracting) return;
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      processImage(file);
+    } else if (file) {
+      toast.error("Please drop an image file");
+    }
+  };
+
+  const handleCSVDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCSV(false);
+    
+    if (isUploading) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (file && (file.type === "text/csv" || file.name.endsWith(".csv"))) {
+      processCSV(file);
+    } else if (file) {
+      toast.error("Please drop a CSV file");
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div>
@@ -134,23 +254,36 @@ export default function ImportPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
         {/* Screenshot OCR */}
-        <div className="glass-card p-8 lg:p-12 rounded-3xl border-2 border-dashed border-[var(--color-lunar-800)] flex flex-col items-center justify-center gap-4 text-center hover:border-[var(--color-violet-500)] transition-colors bg-[var(--color-lunar-950)]/50">
-          <div className="w-16 h-16 rounded-full bg-[var(--color-violet-500)]/10 flex items-center justify-center text-[var(--color-violet-400)] mb-2">
+        <div 
+          className={`relative overflow-hidden glass-card p-8 lg:p-12 rounded-3xl border-2 flex flex-col items-center justify-center gap-4 text-center transition-all duration-300 ease-out bg-[var(--color-lunar-950)]/50
+            ${isDraggingImage 
+              ? "border-solid border-[var(--color-violet-400)] shadow-[0_0_40px_rgba(167,139,250,0.3)] bg-[var(--color-violet-900)]/20 scale-[1.03] -translate-y-2 z-10 [&>*]:pointer-events-none" 
+              : "border-dashed border-[var(--color-lunar-800)] hover:border-[var(--color-violet-500)] hover:bg-[var(--color-lunar-900)]/40"
+            }`}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnterImage}
+          onDragLeave={handleDragLeaveImage}
+          onDrop={handleImageDrop}
+        >
+          {isDraggingImage && (
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-violet-500)]/10 to-transparent animate-pulse pointer-events-none" />
+          )}
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-[var(--color-violet-400)] mb-2 transition-all duration-300 ${isDraggingImage ? "bg-[var(--color-violet-500)]/30 scale-125" : "bg-[var(--color-violet-500)]/10"}`}>
             <PhotoCameraIcon sx={{ fontSize: 32 }} />
           </div>
-          <h2 className="text-xl font-bold text-[var(--color-lunar-50)]">Screenshot OCR</h2>
+          <h2 className={`text-xl font-bold transition-colors ${isDraggingImage ? "text-[var(--color-violet-300)]" : "text-[var(--color-lunar-50)]"}`}>Screenshot OCR</h2>
           <p className="text-sm text-[var(--color-lunar-400)] max-w-sm">
             Drop an image from Instagram or Letterboxd. AI will extract the titles automatically.
           </p>
           
-          <div className="mt-4">
+          <div className="mt-4 flex items-center justify-center gap-3">
             <Button 
               component="label"
               variant="contained" 
               disabled={isExtracting}
               sx={{ bgcolor: "var(--color-violet-600)", '&:hover': { bgcolor: "var(--color-violet-500)" }, color: "white", borderRadius: '999px', textTransform: 'none', px: 4, fontWeight: 'bold' }}
             >
-              {isExtracting ? "Extracting..." : "Select Image"}
+              {isExtracting ? "Extracting..." : "Upload Image"}
               <input
                 type="file"
                 hidden
@@ -158,27 +291,74 @@ export default function ImportPage() {
                 onChange={handleImageUpload}
               />
             </Button>
+            
+            <Button 
+              component="label"
+              variant="outlined" 
+              disabled={isExtracting}
+              sx={{ 
+                display: { xs: 'flex', md: 'none' }, // Only show on mobile
+                borderColor: "var(--color-violet-600)", 
+                color: "var(--color-violet-400)", 
+                '&:hover': { borderColor: "var(--color-violet-400)", bgcolor: "rgba(167, 139, 250, 0.1)" }, 
+                borderRadius: '999px', 
+                minWidth: '48px', 
+                width: '48px', 
+                height: '48px', 
+                p: 0 
+              }}
+              title="Take Photo"
+              aria-label="Take Photo"
+            >
+              <PhotoCameraIcon />
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageUpload}
+              />
+            </Button>
           </div>
           
           {extractedTitles.length > 0 && (
             <div className="w-full max-w-xs mt-4 text-left">
-              <p className="text-xs text-[var(--color-violet-400)] font-bold uppercase mb-2">Extracted Titles</p>
+              <p className="text-xs text-[var(--color-violet-400)] font-bold uppercase mb-2">Ingesting Titles</p>
               <ul className="text-sm text-white bg-[var(--color-lunar-900)] p-3 rounded-xl border border-[var(--color-lunar-800)] max-h-32 overflow-y-auto">
                 {extractedTitles.map((t, i) => (
-                  <li key={i} className="mb-1 last:mb-0 border-b border-[var(--color-lunar-800)] last:border-0 pb-1 last:pb-0">{t}</li>
+                  <li key={i} className="mb-2 last:mb-0 border-b border-[var(--color-lunar-800)] last:border-0 pb-2 last:pb-0 flex items-center justify-between">
+                    <span className="truncate pr-2">{t.title}</span>
+                    {t.status === "pending" && <span className="text-[var(--color-lunar-500)] text-xs">Waiting...</span>}
+                    {t.status === "loading" && <span className="text-[var(--color-violet-400)] text-xs animate-pulse">Searching...</span>}
+                    {t.status === "success" && <span className="text-green-400 text-xs font-bold">Added</span>}
+                    {t.status === "failed" && <span className="text-red-400 text-xs font-bold">Failed</span>}
+                  </li>
                 ))}
               </ul>
-              <p className="text-xs text-[var(--color-lunar-500)] mt-2 italic">Use the command palette (Ctrl+K) or search bars to add these to your vault.</p>
+              <p className="text-xs text-[var(--color-lunar-500)] mt-2 italic text-center">Items are automatically searched and saved to your vault.</p>
             </div>
           )}
         </div>
 
         {/* Goodreads CSV */}
-        <div className="glass-card p-8 lg:p-12 rounded-3xl border-2 border-dashed border-[var(--color-lunar-800)] flex flex-col items-center justify-center gap-4 text-center hover:border-[var(--color-blossom-500)] transition-colors bg-[var(--color-lunar-950)]/50">
-          <div className="w-16 h-16 rounded-full bg-[var(--color-blossom-500)]/10 flex items-center justify-center text-[var(--color-blossom-400)] mb-2">
+        <div 
+          className={`relative overflow-hidden glass-card p-8 lg:p-12 rounded-3xl border-2 flex flex-col items-center justify-center gap-4 text-center transition-all duration-300 ease-out bg-[var(--color-lunar-950)]/50
+            ${isDraggingCSV 
+              ? "border-solid border-[var(--color-blossom-400)] shadow-[0_0_40px_rgba(240,78,150,0.3)] bg-[var(--color-blossom-900)]/20 scale-[1.03] -translate-y-2 z-10 [&>*]:pointer-events-none" 
+              : "border-dashed border-[var(--color-lunar-800)] hover:border-[var(--color-blossom-500)] hover:bg-[var(--color-lunar-900)]/40"
+            }`}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnterCSV}
+          onDragLeave={handleDragLeaveCSV}
+          onDrop={handleCSVDrop}
+        >
+          {isDraggingCSV && (
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-blossom-500)]/10 to-transparent animate-pulse pointer-events-none" />
+          )}
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-[var(--color-blossom-400)] mb-2 transition-all duration-300 ${isDraggingCSV ? "bg-[var(--color-blossom-500)]/30 scale-125" : "bg-[var(--color-blossom-500)]/10"}`}>
             <FileUploadIcon sx={{ fontSize: 32 }} />
           </div>
-          <h2 className="text-xl font-bold text-[var(--color-lunar-50)]">Goodreads CSV</h2>
+          <h2 className={`text-xl font-bold transition-colors ${isDraggingCSV ? "text-[var(--color-blossom-300)]" : "text-[var(--color-lunar-50)]"}`}>Goodreads CSV</h2>
           <p className="text-sm text-[var(--color-lunar-400)] max-w-sm">
             Export the library from Goodreads and upload the CSV here to automatically sync your vault.
           </p>
@@ -201,11 +381,16 @@ export default function ImportPage() {
           </div>
           
           {isUploading && (
-            <div className="w-full max-w-xs mt-4 h-1.5 bg-[var(--color-lunar-900)] rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-[var(--color-blossom-500)] transition-all duration-300" 
-                style={{ width: `${progress}%` }} 
-              />
+            <div className="w-full max-w-xs mt-4 flex flex-col items-center gap-2">
+              <div className="w-full h-1.5 bg-[var(--color-lunar-900)] rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-[var(--color-blossom-500)] transition-all duration-300" 
+                  style={{ width: `${progress}%` }} 
+                />
+              </div>
+              <p className="text-xs text-[var(--color-blossom-400)] flex items-center gap-1 mt-2 font-semibold">
+                <WarningAmberIcon sx={{ fontSize: 14 }} /> Please keep this page open until finished.
+              </p>
             </div>
           )}
         </div>
