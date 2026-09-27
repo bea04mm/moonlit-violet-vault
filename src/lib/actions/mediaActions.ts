@@ -62,7 +62,7 @@ export async function searchExternalMedia(
     
     // Check if query is an ISBN (just numbers/dashes and length 10-13)
     const isIsbn = /^[\d-]{10,17}$/.test(query);
-    const searchQuery = isIsbn ? `isbn:${query.replace(/-/g, "")}` : `intitle:${encodeURIComponent(query)}`;
+    const searchQuery = isIsbn ? `isbn:${query.replace(/-/g, "")}` : encodeURIComponent(query);
 
     const res = await fetch(
       `https://www.googleapis.com/books/v1/volumes?q=${searchQuery}&key=${GOOGLE_BOOKS_API_KEY}&maxResults=5`
@@ -78,7 +78,7 @@ export async function searchExternalMedia(
       const info = item.volumeInfo;
       let coverUrl = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail;
       if (coverUrl) {
-        coverUrl = coverUrl.replace("http://", "https://").replace("zoom=1", "zoom=3");
+        coverUrl = coverUrl.replace("http://", "https://").replace("&edge=curl", "");
       }
 
       return {
@@ -91,6 +91,36 @@ export async function searchExternalMedia(
         author: info.authors ? info.authors.join(", ") : undefined,
         totalPages: info.pageCount ? parseInt(info.pageCount) : undefined,
       };
+    });
+  } else if (type === "recipe") {
+    const res = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error("Failed to fetch recipes from TheMealDB");
+    const data = await res.json();
+    return (data.meals || []).slice(0, 5).map((meal: any) => {
+      const ingredients = [];
+      for (let i = 1; i <= 20; i++) {
+        const ingredient = meal[`strIngredient${i}`];
+        const measure = meal[`strMeasure${i}`];
+        if (ingredient && ingredient.trim() !== "") {
+          ingredients.push(`${measure ? measure.trim() + " " : ""}${ingredient.trim()}`);
+        }
+      }
+      const instructions = meal.strInstructions 
+        ? meal.strInstructions.split(/\r?\n/).map((s: string) => s.trim()).filter(Boolean)
+        : [];
+
+      return {
+        externalId: meal.idMeal,
+        type: "recipe",
+        title: meal.strMeal,
+        coverUrl: meal.strMealThumb,
+        genres: [meal.strCategory, meal.strArea].filter(Boolean),
+        author: meal.strSource ? new URL(meal.strSource).hostname.replace("www.", "") : undefined,
+        // Extended attributes for addMediaToVault
+        _ingredients: ingredients,
+        _instructions: instructions,
+        _source_url: meal.strSource || meal.strYoutube,
+      } as SearchResult & { _ingredients?: string[], _instructions?: string[], _source_url?: string };
     });
   }
 
@@ -185,16 +215,46 @@ export async function addMediaToVault(result: SearchResult): Promise<void> {
     season_progress: seasonProgress,
     tmdb_status: tmdbStatus,
     next_episode_air_date: nextEpisodeAirDate,
-    status: result.type === "book" ? "want_to_read" : "want_to_watch",
+    status: result.type === "book" ? "want_to_read" : result.type === "recipe" ? "want_to_cook" : "want_to_watch",
     ingestion_source: "api_enrichment",
+    ingredients: (result as any)._ingredients || null,
+    instructions: (result as any)._instructions || null,
     // Link external IDs
-    ...(result.type === "book" ? { google_books_id: result.externalId } : { tmdb_id: parseInt(result.externalId) }),
+    ...(result.type === "book" ? { google_books_id: result.externalId } : result.type === "recipe" ? { raw_source_data: { the_meal_db_id: result.externalId } } : { tmdb_id: parseInt(result.externalId) }),
   };
 
   await repo.insert(newItem);
 
   // Revalidate UI so the new item appears instantly
   revalidatePath("/", "layout");
+}
+
+export async function createManualRecipe(formData: FormData): Promise<string> {
+  const repo = await getMediaRepository();
+  
+  const title = formData.get("title") as string;
+  const coverUrl = formData.get("cover_url") as string;
+  const ingredientsStr = formData.get("ingredients") as string;
+  const instructionsStr = formData.get("instructions") as string;
+  
+  if (!title) throw new Error("Title is required");
+
+  const ingredients = ingredientsStr ? ingredientsStr.split('\n').map(s => s.trim()).filter(Boolean) : [];
+  const instructions = instructionsStr ? instructionsStr.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+  const newItem: Partial<MediaItem> = {
+    type: "recipe",
+    title: title,
+    cover_url: coverUrl || undefined,
+    ingredients,
+    instructions,
+    status: "want_to_cook",
+    ingestion_source: "manual",
+  };
+
+  const saved = await repo.insert(newItem);
+  revalidatePath("/", "layout");
+  return saved.id;
 }
 
 export async function updateMediaProgress(

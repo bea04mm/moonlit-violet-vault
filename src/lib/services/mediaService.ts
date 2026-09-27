@@ -12,8 +12,10 @@ export interface VaultStats {
   totalMovies: number;
   totalSeries: number;
   totalBooks: number;
+  totalRecipes: number;
   watchedMovies: number;
   readBooks: number;
+  cookedRecipes: number;
   currentlyWatching: number;
   currentlyReading: number;
 }
@@ -24,16 +26,20 @@ export async function getVaultStats(): Promise<VaultStats> {
     totalMovies,
     totalSeries,
     totalBooks,
+    totalRecipes,
     watchedMovies,
     readBooks,
+    cookedRecipes,
     currentlyWatching,
     currentlyReading,
   ] = await Promise.all([
     repo.count({ type: "movie" }),
     repo.count({ type: "series" }),
     repo.count({ type: "book" }),
+    repo.count({ type: "recipe" }),
     repo.count({ type: "movie", status: "watched" }),
     repo.count({ type: "book", status: "read" }),
+    repo.count({ type: "recipe", status: "cooked" }),
     repo.count({ status: "watching" }),
     repo.count({ status: "reading" }),
   ]);
@@ -42,8 +48,10 @@ export async function getVaultStats(): Promise<VaultStats> {
     totalMovies,
     totalSeries,
     totalBooks,
+    totalRecipes,
     watchedMovies,
     readBooks,
+    cookedRecipes,
     currentlyWatching,
     currentlyReading,
   };
@@ -62,6 +70,12 @@ export async function getMediaItem(id: string): Promise<MediaItem | null> {
 export async function getRecentlyAdded(limit = 6): Promise<MediaItem[]> {
   const repo = await getMediaRepository();
   return repo.findAll({ sortBy: "date_added", sortOrder: "desc", limit });
+}
+
+export async function getFavorites(): Promise<MediaItem[]> {
+  const repo = await getMediaRepository();
+  const allItems = await repo.findAll();
+  return allItems.filter(i => i.is_favorite);
 }
 
 export async function getCurrentlyConsuming(): Promise<MediaItem[]> {
@@ -104,6 +118,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   let totalMovies = 0;
   let totalSeries = 0;
   let totalBooks = 0;
+  let totalRecipes = 0;
 
   const statusMap: Record<string, number> = {
     "Completed": 0,
@@ -145,11 +160,12 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     if (item.type === "movie") totalMovies++;
     if (item.type === "series") totalSeries++;
     if (item.type === "book") totalBooks++;
+    if (item.type === "recipe") totalRecipes++;
 
     // 3. Status Distribution
-    if (["watched", "read"].includes(item.status)) statusMap["Completed"]++;
+    if (["watched", "read", "cooked"].includes(item.status)) statusMap["Completed"]++;
     else if (["watching", "reading"].includes(item.status)) statusMap["In Progress"]++;
-    else if (["want_to_watch", "want_to_read"].includes(item.status)) statusMap["Plan to Watch/Read"]++;
+    else if (["want_to_watch", "want_to_read", "want_to_cook"].includes(item.status)) statusMap["Plan to Watch/Read"]++;
     else statusMap["Dropped / On Hold"]++;
   });
 
@@ -164,6 +180,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       { name: "Movies", value: totalMovies, fill: "var(--color-violet-500)" },
       { name: "Series", value: totalSeries, fill: "var(--color-starlight-400)" },
       { name: "Books", value: totalBooks, fill: "var(--color-lunar-400)" },
+      { name: "Recipes", value: totalRecipes, fill: "var(--color-blossom-500)" },
     ].filter(d => d.value > 0),
     statusDistribution: [
       { name: "Completed", value: statusMap["Completed"], fill: "var(--color-violet-400)" },
@@ -180,6 +197,7 @@ export interface VaultWrappedData {
   moviesFinished: number;
   seriesFinished: number;
   booksFinished: number;
+  recipesFinished: number;
   moviesHours: number;
   seriesHours: number;
   booksPages: number;
@@ -193,11 +211,12 @@ export async function getVaultWrappedStats(year: number): Promise<VaultWrappedDa
 
   // For the sake of the portfolio presentation, we summarize all "completed" items.
   // In a real app with strict date_read columns, we would filter by `year`.
-  const finishedItems = allItems.filter(item => ["watched", "read"].includes(item.status));
+  const finishedItems = allItems.filter(item => ["watched", "read", "cooked"].includes(item.status));
 
   let moviesFinished = 0;
   let seriesFinished = 0;
   let booksFinished = 0;
+  let recipesFinished = 0;
   
   let moviesHours = 0;
   let seriesHours = 0;
@@ -234,6 +253,9 @@ export async function getVaultWrappedStats(year: number): Promise<VaultWrappedDa
       booksFinished++;
       booksPages += item.total_pages || item.pages_read || 300;
     }
+    if (item.type === "recipe") {
+      recipesFinished++;
+    }
 
     // Tally genres
     if (item.genres && Array.isArray(item.genres)) {
@@ -266,6 +288,7 @@ export async function getVaultWrappedStats(year: number): Promise<VaultWrappedDa
     moviesFinished,
     seriesFinished,
     booksFinished,
+    recipesFinished,
     moviesHours: Math.round(moviesHours),
     seriesHours: Math.round(seriesHours),
     booksPages,

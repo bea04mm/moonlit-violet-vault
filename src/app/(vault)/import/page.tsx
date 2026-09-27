@@ -49,19 +49,20 @@ export default function ImportPage() {
         const formData = new FormData();
         formData.append("image", base64);
         formData.append("mimeType", file.type);
-        formData.append("mediaType", "movie or book");
+        formData.append("mediaType", "movie, series, book, or recipe");
 
         const res = await extractTitlesFromImage(formData);
         
         if (res.success && res.titles) {
           // Initialize list with pending status
           const items = res.titles.map((t: any) => ({ 
+            ...t,
             title: t.title || t, 
             type: t.type || "movie", 
             status: "pending" 
           }));
           setExtractedTitles(items);
-          toast.success(`Extracted ${items.length} titles. Ingesting...`);
+          toast.success(`Extracted ${items.length} items. Ingesting...`);
           
           // Auto ingest sequentially
           for (let i = 0; i < items.length; i++) {
@@ -70,7 +71,7 @@ export default function ImportPage() {
             
             try {
               const { ingestExtractedTitle } = await import("@/lib/actions/ocrActions");
-              const ingestRes = await ingestExtractedTitle(item.title, item.type as any);
+              const ingestRes = await ingestExtractedTitle(item);
               if (ingestRes.success) {
                 setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "success" } : p));
               } else {
@@ -271,9 +272,9 @@ export default function ImportPage() {
           <div className={`w-16 h-16 rounded-full flex items-center justify-center text-[var(--color-violet-400)] mb-2 transition-all duration-300 ${isDraggingImage ? "bg-[var(--color-violet-500)]/30 scale-125" : "bg-[var(--color-violet-500)]/10"}`}>
             <PhotoCameraIcon sx={{ fontSize: 32 }} />
           </div>
-          <h2 className={`text-xl font-bold transition-colors ${isDraggingImage ? "text-[var(--color-violet-300)]" : "text-[var(--color-lunar-50)]"}`}>Screenshot OCR</h2>
+          <h2 className={`text-xl font-bold transition-colors ${isDraggingImage ? "text-[var(--color-violet-300)]" : "text-[var(--color-lunar-50)]"}`}>Magic AI Scanner</h2>
           <p className="text-sm text-[var(--color-lunar-400)] max-w-sm">
-            Drop an image from Instagram or Letterboxd. AI will extract the titles automatically.
+            Drop a screenshot of a movie list, or a photo of a recipe book. AI will extract and save it automatically.
           </p>
           
           <div className="mt-4 flex items-center justify-center gap-3">
