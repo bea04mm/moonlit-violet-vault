@@ -3,14 +3,17 @@
 
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { getVaultStats, getRecentlyAdded } from "@/lib/services/mediaService";
+import { getVaultStats, getRecentlyAdded, getFavorites } from "@/lib/services/mediaService";
 import { MediaGrid } from "@/components/media/MediaGrid";
+import { MediaCard } from "@/components/media/MediaCard";
 import { MediaCardSkeleton } from "@/components/ui/Skeleton";
 import MovieIcon from "@mui/icons-material/Movie";
 import TvIcon from "@mui/icons-material/Tv";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import NightlightIcon from "@mui/icons-material/Nightlight";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import { FavoritesCarousel } from "@/components/media/FavoritesCarousel";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -66,7 +69,7 @@ async function DashboardStats() {
   const stats = await getVaultStats();
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
       <StatCard
         icon={<MovieIcon fontSize="large" />}
         label="Movies"
@@ -86,6 +89,12 @@ async function DashboardStats() {
         sub={`${stats.readBooks} read`}
       />
       <StatCard
+        icon={<RestaurantMenuIcon fontSize="large" />}
+        label="Recipes"
+        value={stats.totalRecipes}
+        sub={`${stats.cookedRecipes} cooked`}
+      />
+      <StatCard
         icon={<NightlightIcon fontSize="large" />}
         label="Currently enjoying"
         value={stats.currentlyWatching + stats.currentlyReading}
@@ -101,6 +110,20 @@ async function RecentItems() {
       items={items}
       emptyMessage="My vault is empty. Import from Goodreads or add something!"
     />
+  );
+}
+
+async function FavoriteItems() {
+  const items = await getFavorites();
+  if (items.length === 0) {
+    return (
+      <div className="p-8 text-center text-[var(--color-lunar-500)] bg-[var(--color-lunar-900)] rounded-3xl border border-[var(--color-lunar-800)] text-sm">
+        No favorites yet. Click the heart on your favorite movies or books!
+      </div>
+    );
+  }
+  return (
+    <FavoritesCarousel items={items} />
   );
 }
 
@@ -134,8 +157,8 @@ export default function DashboardPage() {
         </h2>
         <Suspense
           fallback={
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
                   className="rounded-3xl h-36 animate-pulse"
@@ -146,6 +169,30 @@ export default function DashboardPage() {
           }
         >
           <DashboardStats />
+        </Suspense>
+      </section>
+
+      {/* Favorites */}
+      <section aria-labelledby="favorites-heading" className="mb-7">
+        <h2
+          id="favorites-heading"
+          className="text-xs font-semibold uppercase tracking-widest mb-4"
+          style={{ color: "var(--color-lunar-600)" }}
+        >
+          Favorites
+        </h2>
+        <Suspense
+          fallback={
+            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+              {[...Array(3)].map((_, i) => (
+                <div key={`skel-${i}`} className="w-[85vw] sm:w-[350px] md:w-[400px] shrink-0">
+                  <MediaCardSkeleton />
+                </div>
+              ))}
+            </div>
+          }
+        >
+          <FavoriteItems />
         </Suspense>
       </section>
 
@@ -160,8 +207,8 @@ export default function DashboardPage() {
         </h2>
         <Suspense
           fallback={
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
                 <MediaCardSkeleton key={i} />
               ))}
             </div>

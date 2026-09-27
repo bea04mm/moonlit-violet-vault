@@ -27,14 +27,15 @@ import { updateMediaProgress, deleteMediaFromVault } from "@/lib/actions/mediaAc
 
 interface MediaCardProps {
   item: MediaItem;
+  disableGestures?: boolean;
 }
 
-export function MediaCard({ item }: MediaCardProps) {
+export function MediaCard({ item, disableGestures = false }: MediaCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const pathname = usePathname();
   const isDashboard = pathname === "/";
   
-  const href = `/${item.type === "series" ? "series" : item.type === "book" ? "books" : "movies"}/${item.id}`;
+  const href = `/${item.type === "series" ? "series" : item.type === "book" ? "books" : item.type === "recipe" ? "recipes" : "movies"}/${item.id}`;
   const coverSrc = item.cover_url ?? getCoverPlaceholder(item.title);
   
   const hasNewEpisodes = item.type === "series" && item.status === "watched" && item.episode_count && item.episodes_seen < item.episode_count;
@@ -157,32 +158,32 @@ export function MediaCard({ item }: MediaCardProps) {
       </div>
 
       <motion.div
-        drag="x"
+        drag={disableGestures ? false : "x"}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.4}
-        onDragEnd={handleDragEnd}
+        onDragEnd={disableGestures ? undefined : handleDragEnd}
         animate={controls}
-        className="w-full h-full relative z-10"
+        className="w-full h-[168px] sm:h-[192px] relative z-10"
       >
         <Link
           href={href}
           className="group flex flex-row h-full rounded-3xl overflow-hidden border transition-all duration-300 focus-visible:outline-2 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] border-[color-mix(in_srgb,var(--color-violet-500)_15%,transparent)] hover:border-[color-mix(in_srgb,var(--color-violet-500)_35%,transparent)] bg-[var(--color-lunar-950)]"
         >
       {/* Cover image */}
-      <div className="relative w-28 sm:w-32 shrink-0 aspect-[2/3] overflow-hidden">
+      <div className="relative w-28 sm:w-32 shrink-0 h-full overflow-hidden">
         <Image
           src={coverSrc}
           alt={`Cover for ${item.title}`}
           fill
           sizes="128px"
-          unoptimized={coverSrc.includes("placehold.co")}
+          unoptimized
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
       </div>
 
       {/* Card body */}
-      <div className="p-4 flex-1 flex flex-col gap-1">
+      <div className="p-4 flex-1 flex flex-col gap-1 min-w-0">
         {/* Top badges for status & new episodes */}
         <div className="flex flex-wrap items-center gap-2 mb-1">
           {isDashboard && (
@@ -239,10 +240,10 @@ export function MediaCard({ item }: MediaCardProps) {
           </p>
         )}
 
-        {/* Year, Runtime, Pages */}
-        {(item.release_year || item.runtime_minutes || item.total_pages) && (
+        {/* Year, Runtime, Pages, Recipe details */}
+        {(item.release_year || item.runtime_minutes || item.total_pages || item.type === "recipe") && (
           <p
-            className="text-xs flex items-center gap-1.5"
+            className="text-xs flex items-center gap-1.5 flex-wrap"
             style={{ color: "var(--color-lunar-500)" }}
           >
             {item.release_year && <span>{item.release_year}</span>}
@@ -264,14 +265,39 @@ export function MediaCard({ item }: MediaCardProps) {
                 </span>
               </>
             )}
+
+            {item.type === "recipe" && (
+              <>
+                {Array.isArray(item.ingredients) && item.ingredients.length > 0 && (
+                  <span>
+                    {item.ingredients.length} ingredients
+                  </span>
+                )}
+                {Array.isArray(item.instructions) && item.instructions.length > 0 && (
+                  <>
+                    {Array.isArray(item.ingredients) && item.ingredients.length > 0 && <span className="opacity-50">•</span>}
+                    <span>
+                      {item.instructions.length} steps
+                    </span>
+                  </>
+                )}
+              </>
+            )}
           </p>
         )}
 
-        <div className="flex flex-col mt-auto pt-1 gap-2 w-full">
+        <div className="flex flex-col mt-auto pt-1 gap-2 w-full overflow-hidden">
           {/* Synopsis Snippet */}
           {!(item.type === "series" && isWatchingSeries && !isDashboard) && item.synopsis && (
             <p className="text-[11px] text-[var(--color-lunar-400)] line-clamp-3 sm:line-clamp-4 leading-relaxed">
               {item.synopsis.replace(/[*_#~`>]/g, "")}
+            </p>
+          )}
+
+          {/* Recipe Ingredients Preview */}
+          {item.type === "recipe" && !item.synopsis && Array.isArray(item.ingredients) && item.ingredients.length > 0 && (
+            <p className="text-[11px] text-[var(--color-lunar-400)] line-clamp-3 sm:line-clamp-4 leading-relaxed italic">
+              {item.ingredients.join(", ")}
             </p>
           )}
 

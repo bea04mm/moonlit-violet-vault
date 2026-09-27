@@ -207,4 +207,13 @@ body {
   .hide-arrows {
     -moz-appearance: textfield;
   }
+
+  /* Hide scrollbar for horizontal scrolling menus */
+  .custom-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .custom-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }
