@@ -11,6 +11,7 @@ import MovieIcon from "@mui/icons-material/Movie";
 import TvIcon from "@mui/icons-material/Tv";
 import StarIcon from "@mui/icons-material/Star";
 import Image from "next/image";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 
 interface Props {
   data: VaultWrappedData;
@@ -85,7 +86,8 @@ export function WrappedPresentation({ data }: Props) {
           { label: "Movies", count: data.moviesFinished, icon: <MovieIcon fontSize="large" />, color: "var(--color-violet-400)" },
           { label: "Series", count: data.seriesFinished, icon: <TvIcon fontSize="large" />, color: "var(--color-starlight-400)" },
           { label: "Books", count: data.booksFinished, icon: <MenuBookIcon fontSize="large" />, color: "var(--color-lunar-300)" },
-        ].map((item, i) => (
+          { label: "Recipes", count: data.recipesFinished, icon: <RestaurantMenuIcon fontSize="large" />, color: "var(--color-blossom-500)" },
+        ].filter(i => i.count > 0).map((item, i) => (
           <motion.div 
             key={item.label}
             initial={{ scale: 0, opacity: 0 }}
@@ -196,7 +198,7 @@ export function WrappedPresentation({ data }: Props) {
             className="aspect-[2/3] rounded-2xl overflow-hidden relative shadow-lg group"
           >
             {item.cover_url ? (
-              <Image src={item.cover_url} alt={item.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover" unoptimized={item.cover_url.includes("placehold.co")} />
+              <Image src={item.cover_url} alt={item.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover" unoptimized />
             ) : (
               <div className="w-full h-full bg-[var(--color-lunar-800)] flex items-center justify-center p-4 text-center">
                 <span className="text-sm font-bold opacity-50">{item.title}</span>

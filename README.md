@@ -26,9 +26,12 @@
 | 🎬 **Movie Tracker** | Browse, filter and rate your movie collection |
 | 📺 **Series Tracker** | Track ongoing and completed TV series with episode-level precision |
 | 📚 **Book Vault** | Import from Goodreads CSV with full metadata enrichment |
+| 🍳 **Recipe Vault** | Track recipes, ingredients, and instructions (paste URLs directly!) |
+| 📊 **Vault Wrapped** | Spotify-style animated analytics & presentation of your media consumption |
 | 🪄 **In-App Import** | Upload Goodreads CSVs directly in the browser with real-time progress |
 | 🔍 **Smart Match Fixer** | Manually fix bad API matches with Google Books + OpenLibrary fallbacks |
-| 📸 **Screenshot OCR** | Drop an Instagram screenshot → AI extracts media titles automatically |
+| 📸 **Magic AI Scanner** | Drop an Instagram screenshot → AI extracts media titles automatically (formerly OCR) |
+| ⭐ **Favorites Carousel** | Highlight your favorite items in a sleek horizontal swipeable carousel |
 | 📱 **Progressive Web App** | Install natively on iOS, Android, and Desktop with offline support |
 | ⚡ **Command Palette** | Press `Ctrl+K` for global instant search and navigation |
 | 🤏 **Native Gestures** | Horizontal list layout with iOS-style swipe actions (Swipe to delete/progress) |
@@ -74,19 +77,24 @@ This project follows **Clean Architecture** principles, strictly separating conc
 │   Pages (RSC) → use Server Components by default      │
 │   'use client' only for interactive leaf components   │
 └──────────────────────┬────────────────────────────────┘
-                       │ calls
+                       │ mutations call
+┌──────────────────────▼────────────────────────────────┐
+│             Server Actions (lib/actions/)             │
+│   Form handling, RPCs, cache invalidation             │
+└──────────────────────┬────────────────────────────────┘
+                       │ logic calls
 ┌──────────────────────▼────────────────────────────────┐
 │              Services Layer (lib/services/)           │
 │   Business logic: filtering, stats, aggregation       │
 │   Zero direct database imports                        │
 └──────────────────────┬────────────────────────────────┘
-                       │ calls
+                       │ data calls
 ┌──────────────────────▼────────────────────────────────┐
 │           Repository Layer (lib/repositories/)        │
 │   Single source of truth for all DB queries           │
 │   Returns typed MediaItem objects                     │
 └──────────────────────┬────────────────────────────────┘
-                       │ calls
+                       │ db calls
 ┌──────────────────────▼────────────────────────────────┐
 │          Supabase Client Layer (lib/supabase/)        │
 │   server.ts  — RSC & Route Handlers (cookie-aware)    │
@@ -256,6 +264,9 @@ moonlit-violet-vault/
 ├── src/
 │   ├── app/
 │   │   ├── (vault)/          # Protected route group (dashboard + galleries)
+│   │   │   ├── analytics/    # Analytics Dashboard
+│   │   │   ├── recipes/      # Recipe Vault
+│   │   │   └── wrapped/      # Vault Wrapped Presentation
 │   │   ├── auth/callback/    # OAuth callback Route Handler
 │   │   └── login/            # Public login page
 │   ├── components/
@@ -264,6 +275,7 @@ moonlit-violet-vault/
 │   │   ├── layout/           # Navbar
 │   │   └── ui/               # Badge, Skeleton
 │   ├── lib/
+│   │   ├── actions/          # Server Actions (mutations)
 │   │   ├── supabase/         # server.ts, client.ts, database.types.ts
 │   │   ├── repositories/     # mediaRepository.ts
 │   │   ├── services/         # mediaService.ts

@@ -4,8 +4,9 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { searchExternalMedia, addMediaToVault, type SearchResult } from "@/lib/actions/mediaActions";
-import type { MediaType } from "@/lib/supabase/database.types";
+import { usePathname, useRouter } from "next/navigation";
+import { searchExternalMedia, addMediaToVault, getAllMediaAction, type SearchResult } from "@/lib/actions/mediaActions";
+import type { MediaType, MediaItem } from "@/lib/supabase/database.types";
 import { toast } from "sonner";
 
 interface AddMediaModalProps {
@@ -20,17 +21,26 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [vaultItems, setVaultItems] = useState<MediaItem[]>([]);
   
+  const router = useRouter();
+  const pathname = usePathname();
   const debounceRef = useRef<NodeJS.Timeout>(undefined);
 
   // Reset state when opened
   useEffect(() => {
     if (isOpen) {
+      if (pathname.includes("series")) setType("series");
+      else if (pathname.includes("books")) setType("book");
+      else if (pathname.includes("recipes")) setType("recipe");
+      else setType("movie");
+
       setQuery("");
       setResults([]);
       setError(null);
+      getAllMediaAction().then(setVaultItems);
     }
-  }, [isOpen]);
+  }, [isOpen, pathname]);
 
   // Handle escape key
   useEffect(() => {
@@ -108,8 +118,8 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
           </div>
 
           {/* Type Selector */}
-          <div className="flex gap-2 p-1 rounded-xl bg-black/40">
-            {(["movie", "series", "book"] as MediaType[]).map((t) => (
+          <div className="flex gap-2 p-1 rounded-xl bg-black/40 overflow-x-auto custom-scrollbar">
+            {(["movie", "series", "book", "recipe"] as MediaType[]).map((t) => (
               <button
                 key={t}
                 onClick={() => {
@@ -117,7 +127,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                   setQuery("");
                   setResults([]);
                 }}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all ${
+                className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all min-w-[80px] ${
                   type === t ? "bg-[var(--color-violet-500)] text-white shadow-lg" : "text-[var(--color-lunar-400)] hover:text-white"
                 }`}
               >
@@ -149,14 +159,50 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
             </div>
           )}
 
+          {results.length === 0 && query.trim().length < 2 && type === "recipe" && !error && (
+            <div className="p-8 text-center flex flex-col items-center gap-4 animate-fade-in">
+              <span className="text-[var(--color-lunar-500)] text-sm">
+                Have a family recipe? Skip the search.
+              </span>
+              <button
+                onClick={() => {
+                  onClose();
+                  router.push("/recipes/new");
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--color-violet-600)] text-white hover:bg-[var(--color-violet-500)] transition-colors"
+              >
+                + Write Recipe Manually
+              </button>
+            </div>
+          )}
+
           {results.length === 0 && query.trim().length >= 2 && !isSearching && !error && (
-            <div className="p-8 text-center text-[var(--color-lunar-500)] text-sm">
-              No results found for "{query}".
+            <div className="p-8 text-center flex flex-col items-center gap-4">
+              <span className="text-[var(--color-lunar-500)] text-sm">
+                No results found for "{query}".
+              </span>
+              {type === "recipe" && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    router.push("/recipes/new");
+                  }}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+                >
+                  Write Recipe Manually
+                </button>
+              )}
             </div>
           )}
 
           <div className="flex flex-col gap-2">
-            {results.map((result) => (
+            {results.map((result) => {
+              const existingItem = vaultItems.find((item) => 
+                (result.type === "book" && item.google_books_id === result.externalId) ||
+                (result.type !== "book" && item.tmdb_id === parseInt(result.externalId))
+              );
+              
+              return (
               <div 
                 key={result.externalId} 
                 className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors group"
@@ -166,7 +212,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                     <Image src={result.coverUrl} alt={result.title} fill className="object-cover" unoptimized />
                   ) : (
                     <span className="absolute inset-0 flex items-center justify-center text-xl opacity-30">
-                      {type === "movie" ? "🎬" : type === "series" ? "📺" : "📚"}
+                      {type === "movie" ? "🎬" : type === "series" ? "📺" : type === "book" ? "📚" : "🍳"}
                     </span>
                   )}
                 </div>
@@ -181,15 +227,27 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleAdd(result)}
-                  disabled={isAdding === result.externalId}
-                  className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--color-violet-500)] text-[var(--color-violet-300)] hover:bg-[var(--color-violet-500)] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isAdding === result.externalId ? "Adding..." : "+ Add"}
-                </button>
+                {existingItem ? (
+                  <button
+                    onClick={() => {
+                      onClose();
+                      router.push(`/${existingItem.type === "series" ? "series" : existingItem.type === "book" ? "books" : existingItem.type === "recipe" ? "recipes" : "movies"}/${existingItem.id}`);
+                    }}
+                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--color-violet-500)]/20 text-[var(--color-violet-300)] hover:bg-[var(--color-violet-500)] hover:text-white transition-colors border border-transparent hover:border-[var(--color-violet-400)]"
+                  >
+                    View in Vault
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleAdd(result)}
+                    disabled={isAdding === result.externalId}
+                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--color-violet-500)] text-[var(--color-violet-300)] hover:bg-[var(--color-violet-500)] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isAdding === result.externalId ? "Adding..." : "+ Add"}
+                  </button>
+                )}
               </div>
-            ))}
+            )})}
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@
 // Type-safe database schema types — mirrors the Supabase media_items table.
 // Re-generate with: npx supabase gen types typescript --project-id <your-project-id> > src/lib/supabase/database.types.ts
 
-export type MediaType = "movie" | "series" | "book";
+export type MediaType = "movie" | "series" | "book" | "recipe";
 
 export type MediaStatus =
   | "watched"
@@ -12,7 +12,9 @@ export type MediaStatus =
   | "reading"
   | "want_to_read"
   | "dropped"
-  | "on_hold";
+  | "on_hold"
+  | "cooked"
+  | "want_to_cook";
 
 export type IngestionSource =
   | "manual"
@@ -80,6 +82,11 @@ export interface MediaItem {
   raw_source_data: Record<string, unknown> | null;
   tags: string[] | null;
   sort_order: number | null;
+  ingredients: string[] | null;
+  instructions: string[] | null;
+  recipe_yield: string | null;
+  prep_time_minutes: number | null;
+  cook_time_minutes: number | null;
   created_at: string;
   updated_at: string;
 }

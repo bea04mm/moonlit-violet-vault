@@ -9,6 +9,7 @@ import { SignOutButton } from "@/components/auth/SignOutButton";
 import MovieIcon from "@mui/icons-material/Movie";
 import TvIcon from "@mui/icons-material/Tv";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import NightlightIcon from "@mui/icons-material/Nightlight";
@@ -19,6 +20,7 @@ const NAV_LINKS = [
   { href: "/movies", label: "Movies", icon: <MovieIcon fontSize="small" /> },
   { href: "/series", label: "Series", icon: <TvIcon fontSize="small" /> },
   { href: "/books", label: "Books", icon: <MenuBookIcon fontSize="small" /> },
+  { href: "/recipes", label: "Recipes", icon: <RestaurantMenuIcon fontSize="small" /> },
   { href: "/import", label: "Import", icon: <FileUploadIcon fontSize="small" /> },
   { href: "/analytics", label: "Analytics", icon: <BarChartIcon fontSize="small" /> },
 ];
@@ -115,7 +117,7 @@ export function Navbar() {
       </nav>
 
       {/* Mobile Nav Links Row */}
-      <div className="md:hidden border-t border-white/5 px-2 py-1.5 overflow-x-auto custom-scrollbar flex items-center justify-center sm:justify-start gap-1">
+      <div className="md:hidden border-t border-white/5 px-2 py-1.5 overflow-x-auto custom-scrollbar flex items-center justify-start gap-1">
         {NAV_LINKS.map((link) => {
           const isActive = pathname === link.href;
           return (

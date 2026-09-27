@@ -2,13 +2,20 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const SYSTEM_PROMPT = `You are a media title extractor. 
-The user will show you a screenshot (from Instagram, social media, or a streaming platform).
-Your task: extract ALL movie, TV series, or book titles visible in the image.
-Return ONLY a JSON array of objects with the extracted titles and their guessed type.
-Valid types are EXACTLY: "movie", "series", or "book".
-Example: [{"title": "Dune: Part Two", "type": "movie"}, {"title": "The Bear", "type": "series"}, {"title": "Normal People", "type": "book"}]
-If no titles are found, return an empty array: []`;
+const SYSTEM_PROMPT = `You are an AI assistant that extracts media titles and full recipes from images.
+The user will show you a screenshot or a photo.
+1. If it's a list of media (movies, series, books), extract their titles.
+2. If it's a photo of a recipe (handwritten, printed, or a screenshot), extract the recipe.
+Return ONLY a JSON array of objects.
+
+For media titles:
+[{"title": "Dune: Part Two", "type": "movie"}]
+Valid types: "movie", "series", "book".
+
+For full recipes:
+[{"title": "Bacalhau à Brás", "type": "recipe", "ingredients": ["1 onion", "2 potatoes"], "instructions": ["Chop onion", "Fry potatoes"]}]
+
+If no recognizable media or recipes are found, return an empty array: []`;
 
 export async function extractTitlesFromImage(formData: FormData) {
   try {
@@ -24,7 +31,7 @@ export async function extractTitlesFromImage(formData: FormData) {
       systemInstruction: SYSTEM_PROMPT 
     });
 
-    const userPrompt = `This screenshot likely contains ${mediaType} titles. Extract all visible media titles and return them as a JSON array.`;
+    const userPrompt = `Extract all visible media titles or recipes from this image and return them as a JSON array.`;
 
     const result = await model.generateContent([
       {
@@ -50,7 +57,9 @@ export async function extractTitlesFromImage(formData: FormData) {
       // Force a flat structure to prevent Next.js Server Action nesting errors
       const safeTitles = titles.map((t: any) => ({
         title: String(t?.title || t || ""),
-        type: String(t?.type || "movie")
+        type: String(t?.type || "movie"),
+        ingredients: Array.isArray(t?.ingredients) ? t.ingredients.map(String) : undefined,
+        instructions: Array.isArray(t?.instructions) ? t.instructions.map(String) : undefined,
       })).filter(t => t.title.trim().length > 0);
       
       return { success: true, titles: safeTitles };
@@ -63,11 +72,29 @@ export async function extractTitlesFromImage(formData: FormData) {
 }
 
 import { searchExternalMedia, addMediaToVault } from "./mediaActions";
-import type { MediaType } from "@/lib/supabase/database.types";
+import type { MediaType, MediaItem } from "@/lib/supabase/database.types";
 
-export async function ingestExtractedTitle(title: string, type: MediaType) {
+export async function ingestExtractedTitle(item: any) {
   try {
-    const results = await searchExternalMedia(title, type);
+    if (item.type === "recipe" && (item.ingredients?.length > 0 || item.instructions?.length > 0)) {
+      const { getMediaRepository } = await import("@/lib/repositories/mediaRepository");
+      const { revalidatePath } = await import("next/cache");
+      
+      const repo = await getMediaRepository();
+      const newItem: Partial<MediaItem> = {
+        type: "recipe",
+        title: item.title,
+        ingredients: item.ingredients || [],
+        instructions: item.instructions || [],
+        status: "want_to_cook",
+        ingestion_source: "ocr_screenshot"
+      };
+      const saved = await repo.insert(newItem);
+      revalidatePath("/", "layout");
+      return { success: true, match: { title: item.title, type: "recipe", externalId: saved.id } };
+    }
+
+    const results = await searchExternalMedia(item.title, item.type as MediaType);
     if (results && results.length > 0) {
       const bestMatch = results[0];
       await addMediaToVault(bestMatch);
