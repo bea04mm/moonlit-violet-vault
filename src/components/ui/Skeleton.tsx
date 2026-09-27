@@ -23,20 +23,23 @@ export function Skeleton({ className = "" }: SkeletonProps) {
 export function MediaCardSkeleton() {
   return (
     <div
-      className="rounded-3xl overflow-hidden border"
+      className="flex flex-row h-[168px] sm:h-[192px] rounded-3xl overflow-hidden border w-full"
       style={{
-        background: "var(--color-lunar-900)",
-        borderColor:
-          "color-mix(in srgb, var(--color-violet-500) 15%, transparent)",
+        background: "var(--color-lunar-950)",
+        borderColor: "color-mix(in srgb, var(--color-violet-500) 15%, transparent)",
       }}
     >
       {/* Cover image area */}
-      <Skeleton className="w-full aspect-[2/3]" />
+      <Skeleton className="w-28 sm:w-32 h-full shrink-0 rounded-none" />
       {/* Text area */}
-      <div className="p-4 space-y-2">
-        <Skeleton className="h-4 w-3/4" />
+      <div className="p-4 flex-1 flex flex-col gap-3">
+        <Skeleton className="h-5 w-3/4 mt-1" />
         <Skeleton className="h-3 w-1/2" />
         <Skeleton className="h-3 w-1/3" />
+        <div className="mt-auto space-y-2">
+          <Skeleton className="h-2 w-full" />
+          <Skeleton className="h-2 w-4/5" />
+        </div>
       </div>
     </div>
   );
