@@ -18,6 +18,7 @@ import { updateMediaProgress } from "@/lib/actions/mediaActions";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import StarIcon from "@mui/icons-material/Star";
+import { useRouter } from "next/navigation";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import AutoStoriesIcon from "@mui/icons-material/AutoStories";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -32,6 +33,7 @@ export function MediaDetail({ item }: MediaDetailProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "progress">("overview");
   const [isFavorite, setIsFavorite] = useState<boolean>(item.is_favorite);
   const coverSrc = item.cover_url ?? getCoverPlaceholder(item.title);
+  const router = useRouter();
 
   return (
     <article className="relative min-h-[calc(100vh-4rem)] flex flex-col animate-fade-in">
@@ -43,9 +45,9 @@ export function MediaDetail({ item }: MediaDetailProps) {
         {/* Left Column: Cover */}
         <div className="w-full md:w-1/3 lg:w-1/4 shrink-0 flex flex-col gap-6">
           <div className="flex justify-between items-center md:hidden mb-4">
-            <Link href="/" className="inline-flex items-center gap-2 text-sm text-[var(--color-lunar-400)] hover:text-white transition-colors w-fit">
-              ← Back to Vault
-            </Link>
+            <button onClick={() => router.back()} className="inline-flex items-center gap-2 text-sm text-[var(--color-lunar-400)] hover:text-white transition-colors w-fit">
+              ← Back
+            </button>
             <DeleteButton id={item.id} type={item.type} />
           </div>
           
@@ -63,6 +65,7 @@ export function MediaDetail({ item }: MediaDetailProps) {
               className="object-cover"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
               priority
+              unoptimized
             />
           </div>
 
@@ -105,10 +108,20 @@ export function MediaDetail({ item }: MediaDetailProps) {
         {/* Right Column: Details */}
         <div className="flex-1 w-full flex flex-col gap-6">
           <div className="hidden md:flex justify-between items-center w-full">
-            <Link href="/" className="inline-flex items-center gap-2 text-sm text-[var(--color-lunar-400)] hover:text-white transition-colors w-fit">
-              ← Back to Vault
-            </Link>
-            <DeleteButton id={item.id} type={item.type} />
+            <button onClick={() => router.back()} className="inline-flex items-center gap-2 text-sm text-[var(--color-lunar-400)] hover:text-white transition-colors w-fit">
+              ← Back
+            </button>
+            <div className="flex items-center gap-4">
+              {item.type === "recipe" && (
+                <Link 
+                  href={`/recipes/${item.id}/edit`}
+                  className="text-sm font-semibold text-[var(--color-violet-400)] hover:text-[var(--color-violet-300)] transition-colors"
+                >
+                  Edit Recipe
+                </Link>
+              )}
+              <DeleteButton id={item.id} type={item.type} />
+            </div>
           </div>
 
           <div>
@@ -133,7 +146,7 @@ export function MediaDetail({ item }: MediaDetailProps) {
               )}
               {(item.author ?? item.director) && (
                 <span className="font-medium text-[var(--color-violet-300)]">
-                  {item.type === "book" ? "By " : "Directed by "} {item.author ?? item.director}
+                  {item.type === "recipe" ? "Source: " : item.type === "book" ? "By " : "Directed by "} {item.author ?? item.director}
                 </span>
               )}
             </div>
@@ -209,18 +222,20 @@ export function MediaDetail({ item }: MediaDetailProps) {
                   : "text-[var(--color-lunar-500)] hover:text-[var(--color-lunar-300)]"
               }`}
             >
-              Overview & Review
+              {item.type === "recipe" ? "Recipe Details" : "Overview & Review"}
             </button>
-            <button
-              onClick={() => setActiveTab("progress")}
-              className={`text-sm font-semibold pb-4 -mb-4 transition-all ${
-                activeTab === "progress"
-                  ? "text-[var(--color-violet-400)] border-b-2 border-[var(--color-violet-500)]"
-                  : "text-[var(--color-lunar-500)] hover:text-[var(--color-lunar-300)]"
-              }`}
-            >
-              Log Progress
-            </button>
+            {item.type !== "recipe" && (
+              <button
+                onClick={() => setActiveTab("progress")}
+                className={`text-sm font-semibold pb-4 -mb-4 transition-all ${
+                  activeTab === "progress"
+                    ? "text-[var(--color-violet-400)] border-b-2 border-[var(--color-violet-500)]"
+                    : "text-[var(--color-lunar-500)] hover:text-[var(--color-lunar-300)]"
+                }`}
+              >
+                Log Progress
+              </button>
+            )}
           </div>
 
           {/* Tab Content */}
@@ -243,6 +258,35 @@ export function MediaDetail({ item }: MediaDetailProps) {
                         {item.synopsis}
                       </ReactMarkdown>
                     </div>
+                  </div>
+                )}
+
+                {/* Recipe Details */}
+                {item.type === "recipe" && (
+                  <div className="space-y-8">
+                    {item.ingredients && item.ingredients.length > 0 && (
+                      <div className="max-w-none">
+                        <h3 className="text-lg font-semibold text-[var(--color-lunar-200)] mb-3">Ingredients</h3>
+                        <ul className="list-disc pl-5 space-y-1.5 text-[var(--color-lunar-400)] text-sm md:text-base">
+                          {item.ingredients.map((ing, i) => (
+                            <li key={i}>{ing}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {item.instructions && item.instructions.length > 0 && (
+                      <div className="max-w-none">
+                        <h3 className="text-lg font-semibold text-[var(--color-lunar-200)] mb-3">Instructions</h3>
+                        <div className="space-y-4 text-[var(--color-lunar-400)] leading-relaxed text-sm md:text-base">
+                          {item.instructions.map((step, i) => (
+                            <div key={i} className="flex gap-4">
+                              <span className="font-bold text-[var(--color-violet-400)] shrink-0">{i + 1}.</span>
+                              <p>{step}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -1,7 +1,8 @@
 // src/components/media/TabbedDashboard.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { MediaItem, MediaType } from "@/lib/supabase/database.types";
 import { MediaGrid } from "./MediaGrid";
 import { motion, AnimatePresence } from "framer-motion";
@@ -42,6 +43,12 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
       { id: "read", label: "Read", filterFn: (item) => item.status === "read" },
       { id: "other", label: "Other", filterFn: (item) => ["dropped", "on_hold"].includes(item.status) },
     ];
+  } else if (type === "recipe") {
+    tabs = [
+      { id: "want_to_cook", label: "Want to Cook", filterFn: (item) => item.status === "want_to_cook" || item.status === "want_to_watch" },
+      { id: "cooked", label: "Cooked", filterFn: (item) => item.status === "cooked" || item.status === "watched" },
+      { id: "other", label: "Other", filterFn: (item) => ["dropped", "on_hold"].includes(item.status) },
+    ];
   }
 
   // Filter out tabs that have 0 items (except the first two to keep UI consistent)
@@ -50,9 +57,30 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
     return items.some(tab.filterFn);
   });
 
-  const [activeTabId, setActiveTabId] = useState(activeTabs[0].id);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const urlTab = searchParams.get("tab");
+  const defaultTabId = activeTabs.some(t => t.id === urlTab) ? urlTab! : activeTabs[0].id;
+
+  const [activeTabId, setActiveTabId] = useState(defaultTabId);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<"date_added" | "title" | "release_year" | "user_rating">("date_added");
+
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTabId && activeTabs.some(t => t.id === urlTab)) {
+      setActiveTabId(urlTab);
+    }
+  }, [urlTab, activeTabs, activeTabId]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTabId(tabId);
+    setSelectedTags([]);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tabId);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const activeTab = activeTabs.find((t) => t.id === activeTabId) || activeTabs[0];
 
@@ -88,10 +116,7 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTabId(tab.id);
-                  setSelectedTags([]); // Clear tags on tab switch
-                }}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                   isActive
                     ? "bg-[var(--color-violet-500)] text-white shadow-[var(--shadow-glow-sm)] shadow-[var(--color-violet-500)]"

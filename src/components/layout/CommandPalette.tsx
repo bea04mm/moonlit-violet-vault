@@ -8,6 +8,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import MovieIcon from "@mui/icons-material/Movie";
 import TvIcon from "@mui/icons-material/Tv";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import HomeIcon from "@mui/icons-material/Home";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
@@ -72,26 +73,34 @@ export function CommandPalette() {
     // Fuzzy search: split query by space and check if all terms are in title
     const terms = query.toLowerCase().trim().split(/\s+/);
     const filtered = items.filter((item) => {
-      const title = item.title.toLowerCase();
-      return terms.every((term) => title.includes(term));
+      const searchableText = [
+        item.title,
+        item.original_title,
+        item.author,
+        item.director
+      ].filter(Boolean).join(" ").toLowerCase();
+      
+      return terms.every((term) => searchableText.includes(term));
     });
 
     // Grouping: Sort so movies come first, then series, then books
     const movies = filtered.filter((i) => i.type === "movie");
     const series = filtered.filter((i) => i.type === "series");
     const books = filtered.filter((i) => i.type === "book");
+    const recipes = filtered.filter((i) => i.type === "recipe");
 
     const mapItem = (item: MediaItem): PaletteOption => ({
       type: "item",
       id: item.id,
       item,
-      path: `/${item.type === "series" ? "series" : item.type === "book" ? "books" : "movies"}/${item.id}`,
+      path: `/${item.type === "series" ? "series" : item.type === "book" ? "books" : item.type === "recipe" ? "recipes" : "movies"}/${item.id}`,
     });
 
     options = [
       ...movies.map(mapItem),
       ...series.map(mapItem),
       ...books.map(mapItem),
+      ...recipes.map(mapItem),
     ];
   }
 
@@ -139,7 +148,7 @@ export function CommandPalette() {
     return (
       <div className="space-y-1 mt-4 first:mt-0" key={type}>
         <div className="px-3 py-1 text-xs font-semibold text-[var(--color-lunar-500)] uppercase tracking-wider flex items-center gap-2">
-          {type === "movie" ? <MovieIcon fontSize="small" /> : type === "series" ? <TvIcon fontSize="small" /> : <MenuBookIcon fontSize="small" />}
+          {type === "movie" ? <MovieIcon fontSize="small" /> : type === "series" ? <TvIcon fontSize="small" /> : type === "book" ? <MenuBookIcon fontSize="small" /> : <RestaurantMenuIcon fontSize="small" />}
           {title}
         </div>
         {groupItems.map(({ opt, idx }) => {
@@ -214,6 +223,7 @@ export function CommandPalette() {
             {renderItemsGroup("movie", "Movies")}
             {renderItemsGroup("series", "TV Series")}
             {renderItemsGroup("book", "Books")}
+            {renderItemsGroup("recipe", "Recipes")}
           </div>
         )}
 
@@ -264,7 +274,7 @@ function PaletteAction({
       <div className="flex items-center gap-4">
         {coverUrl ? (
           <div className="relative w-10 h-14 rounded-md overflow-hidden shadow-sm flex-shrink-0 bg-black/20 border border-white/5">
-            <Image src={coverUrl} alt={label} fill sizes="40px" className="object-cover" />
+            <Image src={coverUrl} alt={label} fill sizes="40px" className="object-cover" unoptimized />
           </div>
         ) : icon ? (
           <div
