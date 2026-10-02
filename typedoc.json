@@ -1,0 +1,16 @@
+{
+  "entryPoints": [
+    "src",
+    "public/sw.js"
+  ],
+  "entryPointStrategy": "expand",
+  "out": "docs",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/node_modules/**"
+  ],
+  "name": "Moonlit Violet Vault",
+  "includeVersion": true,
+  "plugin": []
+}
