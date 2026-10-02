@@ -9,7 +9,8 @@
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "docs": "typedoc"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -20,14 +21,11 @@
     "@mui/material-nextjs": "^9.1.1",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.111.0",
-    "@tailwindcss/typography": "^0.5.20",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^13.1.0",
     "next": "16.2.12",
     "papaparse": "^5.7.0",
-    "prettier": "^3.9.6",
-    "prettier-plugin-tailwindcss": "^0.8.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
@@ -42,7 +40,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
+    "typedoc": "^0.28.20",
     "typescript": "^5"
   }
 }
