@@ -56,3 +56,9 @@ dist/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# VS Code
+.vscode/
+
+# Documentation
+/docs
