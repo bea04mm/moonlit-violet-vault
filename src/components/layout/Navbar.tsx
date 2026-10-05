@@ -1,7 +1,12 @@
-// src/components/layout/Navbar.tsx
+/**
+ * Sticky top navigation bar for the Moonlit Violet Vault.
+ * Includes the vault logo, desktop nav links, mobile scrollable nav row,
+ * a search button that opens the Command Palette (Ctrl+K), and the sign-out button.
+ * Active route highlighting uses Next.js `usePathname`.
+ * 
+ * @packageDocumentation
+ */
 "use client";
-
-// Top navigation bar — RSC with a client-side sign-out button.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,6 +21,10 @@ import NightlightIcon from "@mui/icons-material/Nightlight";
 import SearchIcon from "@mui/icons-material/Search";
 import { IconButton } from "@mui/material";
 
+/**
+ * All primary navigation destinations in the vault.
+ * Rendered as a horizontal list on desktop and a scrollable row on mobile.
+ */
 const NAV_LINKS = [
   { href: "/movies", label: "Movies", icon: <MovieIcon fontSize="small" /> },
   { href: "/series", label: "Series", icon: <TvIcon fontSize="small" /> },
@@ -25,9 +34,20 @@ const NAV_LINKS = [
   { href: "/analytics", label: "Analytics", icon: <BarChartIcon fontSize="small" /> },
 ];
 
+/**
+ * Top navigation bar — client component because it reads `usePathname`
+ * for active link highlighting and dispatches keyboard events to open the
+ * Command Palette from the search button.
+ */
 export function Navbar() {
+  /**
+   * The current active pathname from Next.js, used to highlight the active tab.
+   */
   const pathname = usePathname();
 
+  /**
+   * Programmatically dispatches a simulated Ctrl+K event to trigger the command palette overlay.
+   */
   const triggerCommandPalette = () => {
     window.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -48,17 +68,17 @@ export function Navbar() {
         borderColor: "color-mix(in srgb, var(--color-violet-500) 12%, transparent)",
       }}
     >
-      <nav className="max-w-screen-xl w-full mx-auto px-4 sm:px-6 h-16 flex items-center gap-4" aria-label="Main navigation">
+      <nav className="max-w-7xl w-full mx-auto px-4 sm:px-6 h-16 flex items-center gap-4" aria-label="Main navigation">
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 font-display font-bold text-lg hover:opacity-80 transition-opacity flex-shrink min-w-0"
+          className="flex items-center gap-2 font-display font-bold text-lg hover:opacity-80 transition-opacity shrink min-w-0"
           style={{
             color: "var(--color-violet-300)",
             fontFamily: "var(--font-display)",
           }}
         >
-          <NightlightIcon className="flex-shrink-0" />
+          <NightlightIcon className="shrink-0" />
           <span className="truncate text-base sm:text-lg">Moonlit Violet Vault</span>
         </Link>
 
@@ -72,8 +92,8 @@ export function Navbar() {
                   href={link.href}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
                     isActive
-                      ? "text-[var(--color-violet-300)] bg-[var(--color-violet-500)]/10"
-                      : "text-[var(--color-lunar-400)] hover:text-[var(--color-violet-300)] hover:bg-[var(--color-violet-500)]/5"
+                      ? "text-violet-300 bg-(--color-violet-500)/10"
+                      : "text-lunar-400 hover:text-violet-300 hover:bg-(--color-violet-500)/5"
                   }`}
                 >
                   {link.icon}
@@ -85,11 +105,11 @@ export function Navbar() {
         </ul>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
           {/* Desktop Search Button */}
           <button
             onClick={triggerCommandPalette}
-            className="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-sm text-[var(--color-lunar-500)] transition-all group"
+            className="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-sm text-lunar-500 transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-1.5 group-hover:text-white transition-colors">
               <SearchIcon fontSize="small" />
@@ -124,10 +144,10 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 isActive
-                  ? "text-[var(--color-violet-300)] bg-[var(--color-violet-500)]/10"
-                  : "text-[var(--color-lunar-400)] hover:text-[var(--color-violet-300)] hover:bg-[var(--color-violet-500)]/5"
+                  ? "text-violet-300 bg-(--color-violet-500)/10"
+                  : "text-lunar-400 hover:text-violet-300 hover:bg-(--color-violet-500)/5"
               }`}
             >
               {link.icon}

@@ -1,9 +1,24 @@
-// src/components/AutoSyncTrigger.tsx
+/**
+ * Invisible background component that automatically keeps TV series data
+ * up-to-date without the user having to do anything manually.
+ * Mounted once inside VaultLayout; renders nothing to the DOM.
+ * 
+ * @packageDocumentation
+ */
 "use client";
 
 import { useEffect, useRef } from "react";
 
+/**
+ * Fires a single request to the cron sync endpoint 3 seconds after the page loads.
+ * The delay prevents this background task from competing with the initial page render.
+ * A ref guard ensures the fetch happens at most once per navigation, even in React
+ * Strict Mode where effects run twice in development.
+ */
 export function AutoSyncTrigger() {
+  /**
+   * Ref used to track if the sync request has already been initiated.
+   */
   const hasTriggered = useRef(false);
 
   useEffect(() => {
@@ -28,5 +43,5 @@ export function AutoSyncTrigger() {
     return () => clearTimeout(timer);
   }, []);
 
-  return null; // Invisible component
+  return null; // Invisible component — no DOM output
 }
