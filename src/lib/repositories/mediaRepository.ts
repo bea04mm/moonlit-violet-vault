@@ -1,21 +1,63 @@
-// src/lib/repositories/mediaRepository.ts
-// Data access layer — single source of truth for all media_items queries.
-// All database interactions live here; never import Supabase directly in pages/components.
-
+/**
+ * Data-access layer (Repository pattern) for the `media_items` Supabase table.
+ * This is the only place in the codebase that talks directly to the database.
+ * All server actions and service functions must go through this repository
+ * instead of importing the Supabase client directly.
+ *
+ * Architecture:
+ *   Pages/Components → mediaService → mediaRepository → Supabase
+ * 
+ * @packageDocumentation
+ */
 import { createClient } from "@/lib/supabase/server";
 import type { MediaItem, MediaType, MediaStatus } from "@/lib/supabase/database.types";
 
+/**
+ * Optional filter / sort / pagination parameters accepted by `findAll` and related queries.
+ */
 export interface MediaFilters {
+  /**
+   * Narrow results to a specific media type.
+   */
   type?: MediaType;
+  /**
+   * Narrow results to a specific status.
+   */
   status?: MediaStatus;
+  /**
+   * Full-text substring search across title, original_title, and author.
+   */
   search?: string;
+  /**
+   * Filter items that contain this genre string in their `genres` array.
+   */
   genre?: string;
+  /**
+   * When true, only return items marked as favourites.
+   */
+  isFavorite?: boolean;
+  /**
+   * Column to sort by. Defaults to "date_added".
+   */
   sortBy?: "date_added" | "release_year" | "user_rating" | "title";
+  /**
+   * Sort direction. Defaults to "desc".
+   */
   sortOrder?: "asc" | "desc";
+  /**
+   * Maximum number of rows to return.
+   */
   limit?: number;
+  /**
+   * Number of rows to skip (for pagination).
+   */
   offset?: number;
 }
 
+/**
+ * Typed interface for the media repository.
+ * Swap the implementation (e.g. for testing) by providing a mock that satisfies this shape.
+ */
 export interface MediaRepository {
   findAll(filters?: MediaFilters): Promise<MediaItem[]>;
   findById(id: string): Promise<MediaItem | null>;
@@ -26,22 +68,42 @@ export interface MediaRepository {
   delete(id: string): Promise<void>;
 }
 
+/**
+ * Data access layer — single source of truth for all media_items queries.
+ * All database interactions live here; never import Supabase directly in pages/components.
+ */
 export async function getMediaRepository(): Promise<MediaRepository> {
+  /**
+   * The server-side Supabase client instance.
+   */
   const supabase = await createClient();
 
+  /**
+   * Helper function to construct a query builder based on provided filters.
+   */
   function buildQuery(filters?: MediaFilters) {
+    /**
+     * The initial Supabase query fetching all columns from the media_items table.
+     */
     let query = supabase.from("media_items").select("*");
 
     if (filters?.type) query = query.eq("type", filters.type);
     if (filters?.status) query = query.eq("status", filters.status);
     if (filters?.genre) query = query.contains("genres", [filters.genre]);
+    if (filters?.isFavorite !== undefined) query = query.eq("is_favorite", filters.isFavorite);
     if (filters?.search) {
       query = query.or(
         `title.ilike.%${filters.search}%,original_title.ilike.%${filters.search}%,author.ilike.%${filters.search}%`
       );
     }
 
+    /**
+     * The column to sort the results by, defaulting to "date_added".
+     */
     const sortBy = filters?.sortBy ?? "date_added";
+    /**
+     * Boolean flag indicating whether the sort order is ascending.
+     */
     const ascending = filters?.sortOrder === "asc";
     query = query.order(sortBy, { ascending, nullsFirst: false });
 
@@ -51,6 +113,9 @@ export async function getMediaRepository(): Promise<MediaRepository> {
     return query;
   }
 
+  /**
+   * The media repository object implementing the data access layer interfaces.
+   */
   const repo: MediaRepository = {
     async findAll(filters) {
       const { data, error } = await buildQuery(filters);

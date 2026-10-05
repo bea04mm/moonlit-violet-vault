@@ -1,13 +1,25 @@
-// src/lib/services/mediaService.ts
-// Business logic layer — sits between repositories and UI.
-// Handles aggregation, formatting helpers, and domain logic.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * @module
+ * 
+ * Business-logic layer that sits between the repository and the UI.
+ * This service orchestrates multiple repository calls, performs aggregations,
+ * and computes derived data (analytics, vault stats, "Wrapped" summary).
+ *
+ * All functions here are async server-side functions — they call the media
+ * repository which itself calls Supabase. Never import this file in Client Components;
+ * use server actions in `lib/actions/` as the boundary instead.
+ */
 
 import { getMediaRepository, type MediaFilters } from "@/lib/repositories/mediaRepository";
-import type { MediaItem, MediaType, MediaStatus } from "@/lib/supabase/database.types";
+import type { MediaItem } from "@/lib/supabase/database.types";
 
+// ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
-
-// --- Aggregated stats for dashboard ---
+/**
+ * Aggregated counts shown on the main vault dashboard.
+ * All fields are plain numbers so they can be safely passed as props to Client Components.
+ */
 export interface VaultStats {
   totalMovies: number;
   totalSeries: number;
@@ -16,11 +28,24 @@ export interface VaultStats {
   watchedMovies: number;
   readBooks: number;
   cookedRecipes: number;
+  /**
+   * Series + movies currently being watched.
+   */
   currentlyWatching: number;
+  /**
+   * Books currently being read.
+   */
   currentlyReading: number;
 }
 
+/**
+ * Business logic layer — sits between repositories and UI.
+ * Handles aggregation, formatting helpers, and domain logic.
+ */
 export async function getVaultStats(): Promise<VaultStats> {
+  /**
+   * The repository instance used for data access.
+   */
   const repo = await getMediaRepository();
   const [
     totalMovies,
@@ -57,28 +82,57 @@ export async function getVaultStats(): Promise<VaultStats> {
   };
 }
 
+/**
+ * Fetches a list of media items based on filters.
+ */
 export async function getMediaList(filters?: MediaFilters): Promise<MediaItem[]> {
+  /**
+   * The repository instance used for data access.
+   */
   const repo = await getMediaRepository();
   return repo.findAll(filters);
 }
 
+/**
+ * Fetches a single media item by ID.
+ */
 export async function getMediaItem(id: string): Promise<MediaItem | null> {
+  /**
+   * The repository instance used for data access.
+   */
   const repo = await getMediaRepository();
   return repo.findById(id);
 }
 
+/**
+ * Fetches the most recently added items.
+ */
 export async function getRecentlyAdded(limit = 6): Promise<MediaItem[]> {
+  /**
+   * The repository instance used for data access.
+   */
   const repo = await getMediaRepository();
   return repo.findAll({ sortBy: "date_added", sortOrder: "desc", limit });
 }
 
+/**
+ * Fetches the users favorite items.
+ */
 export async function getFavorites(): Promise<MediaItem[]> {
+  /**
+   * The repository instance used for data access.
+   */
   const repo = await getMediaRepository();
-  const allItems = await repo.findAll();
-  return allItems.filter(i => i.is_favorite);
+  return repo.findAll({ isFavorite: true, sortBy: "date_added", sortOrder: "desc" });
 }
 
+/**
+ * Fetches items currently being watched or read.
+ */
 export async function getCurrentlyConsuming(): Promise<MediaItem[]> {
+  /**
+   * The repository instance used for data access.
+   */
   const repo = await getMediaRepository();
   const [watching, reading] = await Promise.all([
     repo.findAll({ status: "watching" }),
@@ -87,6 +141,9 @@ export async function getCurrentlyConsuming(): Promise<MediaItem[]> {
   return [...watching, ...reading];
 }
 
+/**
+ * Aggregated analytics data.
+ */
 export interface AnalyticsData {
   timeInvested: {
     moviesHours: number;
@@ -106,20 +163,83 @@ export interface AnalyticsData {
   }[];
 }
 
+/**
+ * Declaration for calculateSeriesWatchedMinutes.
+ */
+function calculateSeriesWatchedMinutes(item: MediaItem): number {
+  if (item.season_progress && Object.values(item.season_progress).some((s: any) => s.episodes)) {
+    /**
+     * Declaration for mins.
+     */
+    let mins = 0;
+    Object.values(item.season_progress).forEach((season: any) => {
+      if (season.episodes) {
+        Object.values(season.episodes).forEach((ep: any) => {
+          if (ep.watched) {
+            mins += ep.runtime_minutes || item.runtime_minutes || 45;
+          }
+        });
+      }
+    });
+    return mins;
+  }
+  // Fallback estimate
+  const epRuntime = item.runtime_minutes || 45;
+  return (item.episodes_seen || 0) * epRuntime;
+}
+
+/**
+ * Builds all analytics data from the full vault in a single pass.
+ * Aggregates time invested, library distribution, and status breakdown
+ * for rendering in AnalyticsCharts.
+ */
 export async function getAnalyticsData(): Promise<AnalyticsData> {
+  /**
+   * The repository instance used for data access.
+   */
   const repo = await getMediaRepository();
+  /**
+   * Declaration for allItems.
+   */
   const allItems = await repo.findAll();
 
+  /**
+   * Declaration for moviesHours.
+   */
   let moviesHours = 0;
+  /**
+   * Declaration for seriesHours.
+   */
   let seriesHours = 0;
+  /**
+   * Declaration for booksPages.
+   */
   let booksPages = 0;
+  /**
+   * Declaration for booksHours.
+   */
   let booksHours = 0;
   
+  /**
+   * Declaration for totalMovies.
+   */
   let totalMovies = 0;
+  /**
+   * Declaration for totalSeries.
+   */
   let totalSeries = 0;
+  /**
+   * Declaration for totalBooks.
+   */
   let totalBooks = 0;
+  /**
+   * Declaration for totalRecipes.
+   */
   let totalRecipes = 0;
 
+  /**
+   * Declaration for statusMap.
+   */
   const statusMap: Record<string, number> = {
     "Completed": 0,
     "In Progress": 0,
@@ -133,23 +253,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       moviesHours += (item.runtime_minutes || 120) / 60;
     }
     if (item.type === "series") {
-      let seriesMins = 0;
-      if (item.season_progress && Object.values(item.season_progress).some(s => s.episodes)) {
-        Object.values(item.season_progress).forEach((season: any) => {
-          if (season.episodes) {
-            Object.values(season.episodes).forEach((ep: any) => {
-              if (ep.watched) {
-                seriesMins += ep.runtime_minutes || item.runtime_minutes || 45;
-              }
-            });
-          }
-        });
-      } else {
-        // Fallback estimate if no episode data is available
-        const epRuntime = item.runtime_minutes || 45;
-        seriesMins = (item.episodes_seen || 0) * epRuntime;
-      }
-      seriesHours += seriesMins / 60;
+      seriesHours += calculateSeriesWatchedMinutes(item) / 60;
     }
     if (item.type === "book") {
       booksPages += item.pages_read || 0;
@@ -191,6 +295,9 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   };
 }
 
+/**
+ * Data for the Vault Wrapped slideshow.
+ */
 export interface VaultWrappedData {
   year: number;
   totalFinished: number;
@@ -205,24 +312,60 @@ export interface VaultWrappedData {
   topItems: MediaItem[];
 }
 
+/**
+ * Fetches and calculates stats for a given year Vault Wrapped.
+ */
 export async function getVaultWrappedStats(year: number): Promise<VaultWrappedData> {
+  /**
+   * The repository instance used for data access.
+   */
   const repo = await getMediaRepository();
+  /**
+   * Complete list of all items fetched to calculate the Wrapped summary.
+   */
   const allItems = await repo.findAll();
 
   // For the sake of the portfolio presentation, we summarize all "completed" items.
   // In a real app with strict date_read columns, we would filter by `year`.
   const finishedItems = allItems.filter(item => ["watched", "read", "cooked"].includes(item.status));
 
+  /**
+   * Total number of finished movies.
+   */
   let moviesFinished = 0;
+  /**
+   * Total number of finished series.
+   */
   let seriesFinished = 0;
+  /**
+   * Total number of finished books.
+   */
   let booksFinished = 0;
+  /**
+   * Total number of finished recipes.
+   */
   let recipesFinished = 0;
   
+  /**
+   * Declaration for moviesHours.
+   */
   let moviesHours = 0;
+  /**
+   * Declaration for seriesHours.
+   */
   let seriesHours = 0;
+  /**
+   * Declaration for booksPages.
+   */
   let booksPages = 0;
   
+  /**
+   * Map accumulating counts to determine top genres.
+   */
   const genreCount: Record<string, number> = {};
+  /**
+   * Array collecting the user's top-rated or favorite items.
+   */
   const topItems: MediaItem[] = [];
 
   finishedItems.forEach(item => {
@@ -232,22 +375,7 @@ export async function getVaultWrappedStats(year: number): Promise<VaultWrappedDa
     }
     if (item.type === "series") {
       seriesFinished++;
-      let seriesMins = 0;
-      if (item.season_progress && Object.values(item.season_progress).some((s: any) => s.episodes)) {
-        Object.values(item.season_progress).forEach((season: any) => {
-          if (season.episodes) {
-            Object.values(season.episodes).forEach((ep: any) => {
-              if (ep.watched) {
-                seriesMins += ep.runtime_minutes || item.runtime_minutes || 45;
-              }
-            });
-          }
-        });
-      } else {
-        const epRuntime = item.runtime_minutes || 45;
-        seriesMins = (item.episodes_seen || 0) * epRuntime;
-      }
-      seriesHours += seriesMins / 60;
+      seriesHours += calculateSeriesWatchedMinutes(item) / 60;
     }
     if (item.type === "book") {
       booksFinished++;
