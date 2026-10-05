@@ -1,4 +1,6 @@
--- supabase/migrations/002_add_progress_tracking.sql
+/*
+  Adds progress tracking columns to media_items. Specifically adds is_favorite, pages_read, total_pages, episodes_seen, and reading_time_minutes to support fine-grained progress logging.
+*/
 
 -- Add new columns for advanced tracking and logging
 ALTER TABLE public.media_items

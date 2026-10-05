@@ -1,4 +1,7 @@
--- supabase/migrations/001_initial_schema.sql
+/*
+  Initial Database Schema. Configures the base media_items table, custom enums (media_type, media_status), UUID generation, Row Level Security (RLS) policies, and timestamp update triggers.
+*/
+
 -- Moonlit Violet Vault — Initial Database Schema
 -- Apply via: Supabase Studio → SQL Editor, or supabase db push
 

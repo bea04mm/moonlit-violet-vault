@@ -1,4 +1,7 @@
--- Supabase Migration Script
+/*
+  Adds custom categorization and ordering. Introduces the tags text array for custom labeling, and sort_order integer for manual drag-and-drop ordering.
+*/
+
 -- Adds support for Custom Collections (Tags) and Drag & Drop sorting
 
 ALTER TABLE public.media_items

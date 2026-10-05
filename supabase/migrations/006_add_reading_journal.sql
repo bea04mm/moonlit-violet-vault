@@ -1,4 +1,6 @@
--- supabase/migrations/006_add_reading_journal.sql
+/*
+  Adds the reading_journal JSONB column. Stores an array of journal entries (dates and notes) for logging daily thoughts while reading a book.
+*/
 
 ALTER TABLE public.media_items
 ADD COLUMN start_date TIMESTAMP WITH TIME ZONE DEFAULT NULL,
