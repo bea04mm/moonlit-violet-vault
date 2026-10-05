@@ -1,9 +1,14 @@
-// src/lib/supabase/database.types.ts
-// Type-safe database schema types — mirrors the Supabase media_items table.
-// Re-generate with: npx supabase gen types typescript --project-id <your-project-id> > src/lib/supabase/database.types.ts
-
+/**
+ * Type-safe database schema types — mirrors the Supabase media_items table.
+ * Re-generate with: npx supabase gen types typescript --project-id <your-project-id> > src/lib/supabase/database.types.ts
+ * 
+ * @packageDocumentation
+ */
 export type MediaType = "movie" | "series" | "book" | "recipe";
 
+/**
+ * Type definition for MediaStatus.
+ */
 export type MediaStatus =
   | "watched"
   | "watching"
@@ -16,12 +21,18 @@ export type MediaStatus =
   | "cooked"
   | "want_to_cook";
 
+/**
+ * Type definition for IngestionSource.
+ */
 export type IngestionSource =
   | "manual"
   | "goodreads_csv"
   | "ocr_screenshot"
   | "api_enrichment";
 
+/**
+ * Type definition for ReadingSession.
+ */
 export interface ReadingSession {
   id: string;
   date: string;
@@ -30,6 +41,9 @@ export interface ReadingSession {
   notes: string;
 }
 
+/**
+ * Type definition for EpisodeData.
+ */
 export interface EpisodeData {
   title: string;
   air_date: string | null;
@@ -38,12 +52,18 @@ export interface EpisodeData {
   watched: boolean;
 }
 
+/**
+ * Type definition for SeasonData.
+ */
 export interface SeasonData {
   total: number;
   watched: number;
   episodes: Record<string, EpisodeData>; // Key is episode number (e.g., "1")
 }
 
+/**
+ * Type definition for MediaItem.
+ */
 export interface MediaItem {
   id: string;
   type: MediaType;

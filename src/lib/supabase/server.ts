@@ -1,12 +1,29 @@
-// src/lib/supabase/server.ts
-// Server-side Supabase client for use in React Server Components and Route Handlers.
-// Uses @supabase/ssr to properly handle cookies in a Next.js App Router context.
-
+/**
+ * Creates a server-side Supabase client for React Server Components and Route Handlers.
+ * Uses @supabase/ssr's `createServerClient` which reads/writes session cookies via
+ * Next.js's `cookies()` helper — the correct approach for App Router server code.
+ *
+ * Usage: import { createClient } from "@/lib/supabase/server"
+ * Never use this in 'use client' files — for browser use, use client.ts instead.
+ * 
+ * @packageDocumentation
+ */
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "./database.types";
 
+/**
+ * Returns an async Supabase client configured for the server environment.
+ * Must be awaited because Next.js `cookies()` is now async in the App Router.
+ *
+ * The `setAll` cookie handler silently ignores errors when called from a
+ * Server Component (where response headers are already committed). Cookies
+ * can only be written in middleware and route handlers.
+ */
 export async function createClient() {
+  /**
+   * The cookie store instance representing the request's cookies.
+   */
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
