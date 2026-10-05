@@ -1,3 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * @module
+ * 
+ * Server Actions for bulk-importing books from a Goodreads CSV export.
+ * Each CSV row is enriched with cover/synopsis data from Google Books
+ * before being written to the vault — new books are inserted, existing
+ * ones are updated so their covers stay fresh.
+ *
+ * Called from the Import page client component.
+ */
 "use server";
 
 import { getMediaRepository } from "@/lib/repositories/mediaRepository";
@@ -5,17 +16,37 @@ import type { MediaItem } from "@/lib/supabase/database.types";
 import { revalidatePath } from "next/cache";
 import { searchGoogleBooks } from "./mediaActions";
 
+/**
+ * Processes a batch of book records parsed from a Goodreads CSV file.
+ * For each book the action:
+ *  1. Checks for duplicates by ISBN or fuzzy title match.
+ *  2. Enriches metadata (cover, synopsis, genres) from Google Books using a
+ *     multi-strategy fallback: ISBN → Title+Author → Stripped Title → Title only.
+ *  3. Inserts new books or updates existing ones.
+ * @returns `{ success, inserted }` where `inserted` is the count of rows written.
+ */
 export async function importGoodreadsBatch(books: Partial<MediaItem>[]) {
   try {
+    /**
+     * The repository instance used to interact with the database.
+     */
     const repo = await getMediaRepository();
+    /**
+     * A list of existing books in the database to check against for duplicates.
+     */
     const existingBooks = await repo.findByType("book");
     
+    /**
+     * A counter tracking the number of books successfully inserted or updated.
+     */
     let inserted = 0;
     for (const book of books) {
       if (!book.title) continue;
       
+      // Strip parenthetical content (like series info) to improve duplicate matching
       const cleanBookTitle = book.title.replace(/\s*\(.*?\)\s*/g, "").trim().toLowerCase();
       
+      // Look for existing copies to avoid duplicate entries and allow for cover updates
       const duplicate = existingBooks.find((e) => {
         if (e.isbn && book.isbn && e.isbn === book.isbn) return true;
         const eTitle = e.title.toLowerCase();
@@ -32,7 +63,7 @@ export async function importGoodreadsBatch(books: Partial<MediaItem>[]) {
         }
 
         // 2. If no ISBN or ISBN failed, fallback to Title + Author fuzzy search
-        let cleanTitle = book.title.replace(/\s*\(.*?\)\s*/g, "").trim(); // Remove (Series #1) etc
+        const cleanTitle = book.title.replace(/\s*\(.*?\)\s*/g, "").trim(); // Remove (Series #1) etc
         
         if (items.length === 0) {
           const queryStr = `${cleanTitle} ${book.author || ""}`.trim();
@@ -56,10 +87,12 @@ export async function importGoodreadsBatch(books: Partial<MediaItem>[]) {
         if (items && items.length > 0) {
           const info = items[0].volumeInfo;
           if (info) {
+            // Pick highest quality cover URL and swap to HTTPS
             let coverUrl = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null;
             if (coverUrl) {
               coverUrl = coverUrl.replace("zoom=1", "zoom=3").replace("http://", "https://");
             }
+            // Fallback to original or duplicate data if Google Books is missing fields
             book.title = info.title || book.title;
             book.cover_url = coverUrl || duplicate?.cover_url;
             book.synopsis = info.description || book.synopsis || duplicate?.synopsis;
@@ -85,7 +118,11 @@ export async function importGoodreadsBatch(books: Partial<MediaItem>[]) {
     
     return { success: true, inserted };
   } catch (error: any) {
-    console.error("Batch import error:", error);
-    return { success: false, error: error.message };
+    /**
+     * An extracted error message ensuring safe string serialization.
+     */
+    const message = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error("Batch import error:", message);
+    return { success: false, error: message };
   }
 }
