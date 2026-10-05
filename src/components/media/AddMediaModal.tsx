@@ -1,4 +1,17 @@
-// src/components/media/AddMediaModal.tsx
+/* eslint-disable react-hooks/set-state-in-effect, react/no-unescaped-entities */
+/**
+ * @module
+ * 
+ * Search-and-add modal overlay for adding new media to the vault.
+ * Renders via a React Portal so it sits above all other page content.
+ *
+ * Features:
+ *  - Media type selector tabs (Movie / Series / Book / Recipe).
+ *  - Debounced live search (1 s delay) against the appropriate external API.
+ *  - Duplicate detection: items already in the vault show "View in Vault" instead of "Add".
+ *  - Recipe fallback: a shortcut to the manual recipe creation form.
+ *  - Pre-selects the media type based on the current URL path.
+ */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -9,11 +22,19 @@ import { searchExternalMedia, addMediaToVault, getAllMediaAction, type SearchRes
 import type { MediaType, MediaItem } from "@/lib/supabase/database.types";
 import { toast } from "sonner";
 
-interface AddMediaModalProps {
+/**
+ * Props for the AddMediaModal component.
+ */
+export interface AddMediaModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+/**
+ * Modal dialog for searching external APIs and adding media to the vault.
+ * Uses a React Portal to escape any overflow-hidden parent containers.
+ * The `mounted` guard prevents SSR hydration mismatches for the portal.
+ */
 export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
   const [type, setType] = useState<MediaType>("movie");
   const [query, setQuery] = useState("");
@@ -23,8 +44,17 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [vaultItems, setVaultItems] = useState<MediaItem[]>([]);
   
+  /**
+   * Next.js router instance for handling client-side navigation.
+   */
   const router = useRouter();
+  /**
+   * Current URL pathname used to determine the active route or media type context.
+   */
   const pathname = usePathname();
+  /**
+   * Mutable reference to the debounce timeout timer, preventing excessive API calls on rapid input.
+   */
   const debounceRef = useRef<NodeJS.Timeout>(undefined);
 
   // Reset state when opened
@@ -44,6 +74,9 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
 
   // Handle escape key
   useEffect(() => {
+    /**
+     * Keyboard event handler for the Escape key to close the modal.
+     */
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -67,8 +100,8 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
       try {
         const data = await searchExternalMedia(query, type);
         setResults(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to search.");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to search.");
       } finally {
         setIsSearching(false);
       }
@@ -79,6 +112,10 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
     };
   }, [query, type]);
 
+  /**
+   * Adds the selected external media result to the local vault, displaying
+   * appropriate toast notifications on success or error.
+   */
   async function handleAdd(result: SearchResult) {
     setIsAdding(result.externalId);
     setError(null);
@@ -86,8 +123,8 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
       await addMediaToVault(result);
       toast.success(`${result.title} added to vault!`);
       onClose(); // Close on success
-    } catch (err: any) {
-      toast.error(err.message || "Failed to add to vault.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to add to vault.");
     } finally {
       setIsAdding(null);
     }
@@ -99,7 +136,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" style={{ position: "fixed" }}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" style={{ position: "fixed" }}>
       <div 
         className="glass-card w-full max-w-2xl rounded-3xl flex flex-col max-h-[85vh] overflow-hidden"
         style={{ boxShadow: "var(--shadow-glow-md)" }}
@@ -110,7 +147,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
             <h2 className="text-xl font-display font-bold text-gradient-violet">Add to Vault</h2>
             <button 
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
               aria-label="Close"
             >
               ✕
@@ -127,8 +164,8 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                   setQuery("");
                   setResults([]);
                 }}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all min-w-[80px] ${
-                  type === t ? "bg-[var(--color-violet-500)] text-white shadow-lg" : "text-[var(--color-lunar-400)] hover:text-white"
+                className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all min-w-20 ${
+                  type === t ? "bg-(--color-violet-500) text-white shadow-lg" : "text-lunar-400 hover:text-white cursor-pointer"
                 }`}
               >
                 {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -143,10 +180,10 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search for a ${type}...`}
-              className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-[var(--color-lunar-500)] focus:outline-none focus:border-[var(--color-violet-400)] transition-colors"
+              className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-lunar-500 focus:outline-none focus:border-violet-400 transition-colors"
             />
             {isSearching && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[var(--color-violet-500)] border-t-transparent rounded-full animate-spin" />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-(--color-violet-500) border-t-transparent rounded-full animate-spin" />
             )}
           </div>
         </div>
@@ -154,14 +191,14 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
         {/* Results Body */}
         <div className="flex-1 overflow-y-auto p-2">
           {error && (
-            <div className="m-4 p-3 rounded-xl bg-[color-mix(in_srgb,var(--color-blossom-500)_10%,transparent)] text-[var(--color-blossom-400)] text-sm text-center">
+            <div className="m-4 p-3 rounded-xl bg-[color-mix(in_srgb,var(--color-blossom-500)_10%,transparent)] text-blossom-400 text-sm text-center">
               {error}
             </div>
           )}
 
           {results.length === 0 && query.trim().length < 2 && type === "recipe" && !error && (
             <div className="p-8 text-center flex flex-col items-center gap-4 animate-fade-in">
-              <span className="text-[var(--color-lunar-500)] text-sm">
+              <span className="text-lunar-500 text-sm">
                 Have a family recipe? Skip the search.
               </span>
               <button
@@ -169,7 +206,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                   onClose();
                   router.push("/recipes/new");
                 }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--color-violet-600)] text-white hover:bg-[var(--color-violet-500)] transition-colors"
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-(--color-violet-500) transition-colors cursor-pointer"
               >
                 + Write Recipe Manually
               </button>
@@ -178,7 +215,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
 
           {results.length === 0 && query.trim().length >= 2 && !isSearching && !error && (
             <div className="p-8 text-center flex flex-col items-center gap-4">
-              <span className="text-[var(--color-lunar-500)] text-sm">
+              <span className="text-lunar-500 text-sm">
                 No results found for "{query}".
               </span>
               {type === "recipe" && (
@@ -187,7 +224,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                     onClose();
                     router.push("/recipes/new");
                   }}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   Write Recipe Manually
                 </button>
@@ -207,7 +244,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                 key={result.externalId} 
                 className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors group"
               >
-                <div className="w-12 h-16 bg-[var(--color-lunar-900)] rounded-lg overflow-hidden relative shrink-0">
+                <div className="w-12 h-16 bg-(--color-lunar-900) rounded-lg overflow-hidden relative shrink-0">
                   {result.coverUrl ? (
                     <Image src={result.coverUrl} alt={result.title} fill className="object-cover" unoptimized />
                   ) : (
@@ -218,10 +255,10 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-[var(--color-lunar-100)] truncate">
+                  <h3 className="text-sm font-semibold text-lunar-100 truncate">
                     {result.title}
                   </h3>
-                  <div className="text-xs text-[var(--color-lunar-500)] mt-0.5 flex gap-2">
+                  <div className="text-xs text-lunar-500 mt-0.5 flex gap-2">
                     {result.releaseYear && <span>{result.releaseYear}</span>}
                     {result.author && <span className="truncate">{result.author}</span>}
                   </div>
@@ -233,7 +270,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                       onClose();
                       router.push(`/${existingItem.type === "series" ? "series" : existingItem.type === "book" ? "books" : existingItem.type === "recipe" ? "recipes" : "movies"}/${existingItem.id}`);
                     }}
-                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--color-violet-500)]/20 text-[var(--color-violet-300)] hover:bg-[var(--color-violet-500)] hover:text-white transition-colors border border-transparent hover:border-[var(--color-violet-400)]"
+                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-(--color-violet-500)/20 text-violet-300 hover:bg-(--color-violet-500) hover:text-white transition-colors border border-transparent hover:border-violet-400 cursor-pointer"
                   >
                     View in Vault
                   </button>
@@ -241,7 +278,7 @@ export function AddMediaModal({ isOpen, onClose }: AddMediaModalProps) {
                   <button
                     onClick={() => handleAdd(result)}
                     disabled={isAdding === result.externalId}
-                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--color-violet-500)] text-[var(--color-violet-300)] hover:bg-[var(--color-violet-500)] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-(--color-violet-500) text-violet-300 hover:bg-(--color-violet-500) hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isAdding === result.externalId ? "Adding..." : "+ Add"}
                   </button>

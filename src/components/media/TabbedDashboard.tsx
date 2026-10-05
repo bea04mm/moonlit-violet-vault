@@ -1,4 +1,9 @@
-// src/components/media/TabbedDashboard.tsx
+/**
+ * Tabbed Dashboard component for organizing media items.
+ * 
+ * @packageDocumentation
+ */
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization, @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -7,18 +12,31 @@ import type { MediaItem, MediaType } from "@/lib/supabase/database.types";
 import { MediaGrid } from "./MediaGrid";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface TabbedDashboardProps {
+/**
+ * Props interface for the TabbedDashboardProps.
+ */
+export interface TabbedDashboardProps {
   type: MediaType;
   items: MediaItem[];
+  headerNode?: React.ReactNode;
 }
 
+/**
+ * Configuration object for a dashboard filter tab.
+ */
 type TabConfig = {
   id: string;
   label: string;
   filterFn: (item: MediaItem) => boolean;
 };
 
-export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
+/**
+ * Tabbed interface for filtering media lists by status.
+ */
+export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProps) {
+  /**
+   * Array of tab configuration objects defining filters and labels for the media dashboard.
+   */
   let tabs: TabConfig[] = [];
 
   if (type === "series") {
@@ -57,11 +75,26 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
     return items.some(tab.filterFn);
   });
 
+  /**
+   * Next.js router instance for handling client-side navigation.
+   */
   const router = useRouter();
+  /**
+   * Next.js hook for accessing the current URL search parameters.
+   */
   const searchParams = useSearchParams();
+  /**
+   * Current URL pathname used to determine the active route or media type context.
+   */
   const pathname = usePathname();
 
+  /**
+   * The currently selected tab ID extracted from the URL query string.
+   */
   const urlTab = searchParams.get("tab");
+  /**
+   * The fallback tab ID to use if no valid tab is specified in the URL.
+   */
   const defaultTabId = activeTabs.some(t => t.id === urlTab) ? urlTab! : activeTabs[0].id;
 
   const [activeTabId, setActiveTabId] = useState(defaultTabId);
@@ -74,17 +107,32 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
     }
   }, [urlTab, activeTabs, activeTabId]);
 
+  /**
+   * Changes the active tab, clears selected tags, and updates the URL query string without scrolling.
+   */
   const handleTabChange = (tabId: string) => {
     setActiveTabId(tabId);
     setSelectedTags([]);
+    /**
+     * Mutable URLSearchParams instance used to construct the updated URL query string.
+     */
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tabId);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  /**
+   * The currently active tab configuration object based on state or URL.
+   */
   const activeTab = activeTabs.find((t) => t.id === activeTabId) || activeTabs[0];
 
+  /**
+   * Memoized array of media items filtered by the active tab and selected tags, and sorted by user preference.
+   */
   const filteredItems = useMemo(() => {
+    /**
+     * Intermediate array holding the filtered media items before applying tags and sorting.
+     */
     let result = items.filter(activeTab.filterFn);
 
     if (selectedTags.length > 0) {
@@ -107,7 +155,7 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
   return (
     <div className="flex flex-col gap-8 w-full">
       {/* Header Row: Tabs + Sort */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-lunar-800)] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-lunar-800 pb-4">
         {/* Tab Navigation */}
         <div className="flex flex-wrap gap-2">
           {activeTabs.map((tab) => {
@@ -119,12 +167,12 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
                 onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                   isActive
-                    ? "bg-[var(--color-violet-500)] text-white shadow-[var(--shadow-glow-sm)] shadow-[var(--color-violet-500)]"
-                    : "bg-[var(--color-lunar-900)] text-[var(--color-lunar-400)] hover:bg-[var(--color-lunar-800)] hover:text-[var(--color-lunar-200)]"
+                    ? "bg-(--color-violet-500) text-white shadow-(--shadow-glow-sm)"
+                    : "bg-(--color-lunar-900) text-lunar-400 hover:bg-lunar-800 hover:text-lunar-200"
                 }`}
               >
                 {tab.label}
-                <span className={`px-2 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-[var(--color-lunar-800)] text-[var(--color-lunar-500)]"}`}>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-lunar-800 text-lunar-500"}`}>
                   {count}
                 </span>
               </button>
@@ -136,7 +184,7 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as any)}
-          className="bg-[var(--color-lunar-900)] text-[var(--color-lunar-200)] text-sm rounded-xl px-4 py-2 border border-[var(--color-lunar-800)] focus:outline-none focus:border-[var(--color-violet-500)] cursor-pointer"
+          className="bg-(--color-lunar-900) text-lunar-200 text-sm rounded-xl px-4 py-2 border border-lunar-800 focus:outline-none focus:border-(--color-violet-500) cursor-pointer"
         >
           <option value="date_added">Recently Added</option>
           <option value="title">Title (A-Z)</option>
@@ -160,8 +208,8 @@ export function TabbedDashboard({ type, items }: TabbedDashboardProps) {
                 }
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors border ${
                   isSelected
-                    ? "bg-[rgba(139,92,246,0.15)] text-[var(--color-violet-300)] border-[var(--color-violet-500)]"
-                    : "bg-transparent text-[var(--color-lunar-400)] border-[var(--color-lunar-800)] hover:border-[var(--color-lunar-600)]"
+                    ? "bg-[rgba(139,92,246,0.15)] text-violet-300 border-(--color-violet-500)"
+                    : "bg-transparent text-lunar-400 border-lunar-800 hover:border-lunar-600"
                 }`}
               >
                 #{tag}

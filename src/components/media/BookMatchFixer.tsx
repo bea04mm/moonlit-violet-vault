@@ -1,51 +1,87 @@
+/**
+ * Client component that lets me fix incorrect book metadata (wrong cover, wrong edition).
+ * Provides two ways to update: paste a direct image URL, or re-search Google Books by
+ * title/author/ISBN and pick the correct edition from the results.
+ * Only renders for items with `type === "book"`.
+ * 
+ * @packageDocumentation
+ */
 "use client";
 
 import { useState } from "react";
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from "@mui/material";
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions,  CircularProgress } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import Image from "next/image";
 import { updateMediaProgress, searchGoogleBooks } from "@/lib/actions/mediaActions";
 import { toast } from "sonner";
+import type { MediaItem } from "@/lib/supabase/database.types";
+import type { GoogleBooksItem } from "@/types";
 
-export function BookMatchFixer({ item }: { item: any }) {
+
+/**
+ * Button + dialog that allows re-matching a book to the correct Google Books entry.
+ * Shown on the book detail page below the cover image.
+ */
+export function BookMatchFixer({ item }: { item: MediaItem }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(item.title);
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<GoogleBooksItem[]>([]);
   const [customCover, setCustomCover] = useState("");
 
+  /**
+   * Initiates a search against the Google Books API using the provided query and updates the results list.
+   */
   const handleSearch = async () => {
     if (!query) return;
     setLoading(true);
     try {
+      // Fetch matching books from Google Books API
       const items = await searchGoogleBooks(query);
       setResults(items);
     } catch (e) {
-      toast.error("Failed to search Google Books");
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      toast.error(`Failed to search: ${msg}`);
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Updates the media item's cover URL with a user-provided custom image URL.
+   */
   const handleCustomCover = async () => {
     if (!customCover) return;
     try {
+      // Directly update the media item with the custom URL
       await updateMediaProgress(item.id, { cover_url: customCover });
       toast.success("Cover updated!");
       setOpen(false);
     } catch (e) {
-      toast.error("Failed to update cover");
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      toast.error(`Failed to update cover: ${msg}`);
     }
   };
 
-  const handleSelect = async (book: any) => {
+  /**
+   * Selects a book from the search results, merges its metadata with the current item, and saves the update.
+   */
+  const handleSelect = async (book: GoogleBooksItem) => {
+    /**
+     * Extracted volume information containing book metadata from the Google Books API response.
+     */
     const info = book.volumeInfo;
+    /**
+     * Best available cover image URL extracted from the volume information.
+     */
     let coverUrl = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null;
     if (coverUrl) {
+      // Upgrade HTTP links to HTTPS and remove curl edge crop parameters
       coverUrl = coverUrl.replace("http://", "https://").replace("&edge=curl", "");
     }
 
     try {
+      // Merge selected Google Books metadata with existing item data
       await updateMediaProgress(item.id, {
         title: info.title || item.title,
         cover_url: coverUrl || item.cover_url,
@@ -53,12 +89,13 @@ export function BookMatchFixer({ item }: { item: any }) {
         genres: info.categories || item.genres,
         author: info.authors ? info.authors.join(", ") : item.author,
         release_year: info.publishedDate ? parseInt(info.publishedDate) : item.release_year,
-        total_pages: info.pageCount || item.total_pages,
+        total_pages: info.pageCount ? Number(info.pageCount) : item.total_pages,
       });
       toast.success("Book metadata updated!");
       setOpen(false);
     } catch (e) {
-      toast.error("Failed to update book");
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      toast.error(`Failed to update book: ${msg}`);
     }
   };
 
@@ -68,7 +105,7 @@ export function BookMatchFixer({ item }: { item: any }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-2 w-full py-3 mt-2 rounded-2xl border transition-all shadow-sm font-semibold bg-lunar-900 border-lunar-800 text-lunar-400 hover:bg-violet-900/30 hover:text-violet-300 hover:border-violet-500/50"
+        className="flex items-center justify-center gap-2 w-full py-3 mt-2 rounded-2xl border transition-all shadow-sm font-semibold bg-lunar-900 border-lunar-800 text-lunar-400 hover:bg-violet-900/30 hover:text-violet-300 hover:border-violet-500/50 cursor-pointer"
       >
         <SearchIcon fontSize="small" className="opacity-70" />
         Edit Cover / Match
@@ -102,7 +139,7 @@ export function BookMatchFixer({ item }: { item: any }) {
             />
             <button 
               onClick={handleCustomCover} 
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
+              className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors shrink-0 cursor-pointer"
             >
               Update
             </button>
@@ -123,7 +160,7 @@ export function BookMatchFixer({ item }: { item: any }) {
             />
             <button 
               onClick={handleSearch} 
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors shrink-0"
+              className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors shrink-0 cursor-pointer"
             >
               Search
             </button>
