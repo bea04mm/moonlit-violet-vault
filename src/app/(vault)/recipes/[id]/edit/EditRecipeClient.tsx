@@ -1,3 +1,10 @@
+/**
+ * Client component for editing an existing recipe.
+ * Pre-fills the form from the existing item, splits ingredient/instruction
+ * arrays by newlines, and calls updateMediaProgress on submit.
+ * 
+ * @packageDocumentation
+ */
 "use client";
 
 import { useState } from "react";
@@ -7,11 +14,20 @@ import type { MediaItem } from "@/lib/supabase/database.types";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { toast } from "sonner";
 
+/**
+ * Client-side form for editing a recipe.
+ */
 export function EditRecipeClient({ item }: { item: MediaItem }) {
+  /**
+   * Next.js router instance for navigating after the recipe is updated.
+   */
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Handles the form submission by parsing inputs, updating the recipe, and redirecting.
+   */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -37,8 +53,8 @@ export function EditRecipeClient({ item }: { item: MediaItem }) {
       toast.success("Recipe updated!");
       router.push(`/recipes/${item.id}`);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Failed to update recipe");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update recipe");
       setIsSubmitting(false);
     }
   }
@@ -54,7 +70,7 @@ export function EditRecipeClient({ item }: { item: MediaItem }) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-black/40 p-6 rounded-2xl border border-white/5 shadow-[var(--shadow-card)]">
+      <form onSubmit={handleSubmit} className="space-y-6 bg-black/40 p-6 rounded-2xl border border-white/5 shadow-(--shadow-card)">
         {error && (
           <div className="p-4 rounded-xl bg-red-500/10 text-red-400 text-sm border border-red-500/20">
             {error}
@@ -62,7 +78,7 @@ export function EditRecipeClient({ item }: { item: MediaItem }) {
         )}
 
         <div className="space-y-2">
-          <label htmlFor="title" className="text-sm font-semibold text-[var(--color-lunar-200)]">
+          <label htmlFor="title" className="text-sm font-semibold text-lunar-200">
             Recipe Title *
           </label>
           <input
@@ -71,12 +87,12 @@ export function EditRecipeClient({ item }: { item: MediaItem }) {
             required
             type="text"
             defaultValue={item.title}
-            className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-[var(--color-lunar-500)] focus:outline-none focus:border-[var(--color-violet-400)] transition-colors"
+            className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-lunar-500 focus:outline-none focus:border-violet-400 transition-colors"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="cover_url" className="text-sm font-semibold text-[var(--color-lunar-200)]">
+          <label htmlFor="cover_url" className="text-sm font-semibold text-lunar-200">
             Photo URL (Optional)
           </label>
           <input
@@ -84,12 +100,12 @@ export function EditRecipeClient({ item }: { item: MediaItem }) {
             name="cover_url"
             type="url"
             defaultValue={item.cover_url || ""}
-            className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-[var(--color-lunar-500)] focus:outline-none focus:border-[var(--color-violet-400)] transition-colors"
+            className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-lunar-500 focus:outline-none focus:border-violet-400 transition-colors"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="ingredients" className="text-sm font-semibold text-[var(--color-lunar-200)]">
+          <label htmlFor="ingredients" className="text-sm font-semibold text-lunar-200">
             Ingredients (One per line)
           </label>
           <textarea
@@ -97,12 +113,12 @@ export function EditRecipeClient({ item }: { item: MediaItem }) {
             name="ingredients"
             rows={5}
             defaultValue={(item.ingredients as string[] || []).join("\n")}
-            className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-[var(--color-lunar-500)] focus:outline-none focus:border-[var(--color-violet-400)] transition-colors resize-none"
+            className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-lunar-500 focus:outline-none focus:border-violet-400 transition-colors resize-none"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="instructions" className="text-sm font-semibold text-[var(--color-lunar-200)]">
+          <label htmlFor="instructions" className="text-sm font-semibold text-lunar-200">
             Instructions (One step per line)
           </label>
           <textarea
@@ -110,7 +126,7 @@ export function EditRecipeClient({ item }: { item: MediaItem }) {
             name="instructions"
             rows={8}
             defaultValue={(item.instructions as string[] || []).join("\n")}
-            className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-[var(--color-lunar-500)] focus:outline-none focus:border-[var(--color-violet-400)] transition-colors resize-none"
+            className="w-full bg-black/40 border border-[color-mix(in_srgb,var(--color-violet-500)_30%,transparent)] rounded-xl px-4 py-3 text-sm text-white placeholder-lunar-500 focus:outline-none focus:border-violet-400 transition-colors resize-none"
           />
         </div>
 
@@ -118,14 +134,14 @@ export function EditRecipeClient({ item }: { item: MediaItem }) {
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[var(--color-lunar-300)] hover:text-white hover:bg-white/5 transition-colors"
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-lunar-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[var(--color-violet-600)] text-white hover:bg-[var(--color-violet-500)] transition-colors disabled:opacity-50"
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-(--color-violet-500) transition-colors disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? "Saving..." : "Save Recipe"}
           </button>
