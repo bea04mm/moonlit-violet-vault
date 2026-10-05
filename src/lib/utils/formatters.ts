@@ -1,5 +1,8 @@
-// src/lib/utils/formatters.ts
-// Shared formatting utilities — pure functions, no side effects.
+/**
+ * Shared formatting utilities — pure functions, no side effects.
+ * 
+ * @packageDocumentation
+ */
 
 /**
  * Formats a runtime in minutes as a human-readable string.
@@ -7,7 +10,13 @@
  */
 export function formatRuntime(minutes: number | null): string {
   if (!minutes) return "—";
+  /**
+   * The computed hours component of the runtime.
+   */
   const h = Math.floor(minutes / 60);
+  /**
+   * The computed remainder minutes of the runtime.
+   */
   const m = minutes % 60;
   if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
@@ -57,6 +66,9 @@ export function truncate(text: string, maxLength: number): string {
  * or returns a fallback cover placeholder URL when cover_url is null.
  */
 export function getCoverPlaceholder(title: string): string {
+  /**
+   * The URL-encoded representation of the title used for placeholder image generation.
+   */
   const encoded = encodeURIComponent(title);
   return `https://placehold.co/300x450/1e1833/c89aff?text=${encoded}&font=raleway`;
 }

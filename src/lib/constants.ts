@@ -1,7 +1,17 @@
-// src/lib/constants.ts
+/**
+ * Application-wide constants shared between components, actions, and utilities.
+ * Centralising labels and colours here means a single place to update wording or theming.
+ * 
+ * @packageDocumentation
+ */
+
 import type { MediaType, MediaStatus } from "@/lib/supabase/database.types";
 
-export const STATUS_LABELS: Record<MediaStatus | "want_to_cook" | "cooked", string> = {
+/**
+ * Human-readable display labels for every media status value.
+ * Consumed by Badge chips, select dropdowns, and analytics charts.
+ */
+export const STATUS_LABELS: Record<MediaStatus, string> = {
   watched: "Watched",
   watching: "Watching",
   want_to_watch: "Want to Watch",
@@ -12,9 +22,14 @@ export const STATUS_LABELS: Record<MediaStatus | "want_to_cook" | "cooked", stri
   on_hold: "On Hold",
   want_to_cook: "Want to Cook",
   cooked: "Cooked",
-} as Record<MediaStatus, string>;
+};
 
-export const STATUS_COLORS: Record<MediaStatus | "want_to_cook" | "cooked", string> = {
+/**
+ * Tailwind CSS class strings for coloured status badge chips.
+ * Each key corresponds to a `MediaStatus` value and maps to a
+ * background / text / border colour combination matching the vault palette.
+ */
+export const STATUS_COLORS: Record<MediaStatus, string> = {
   watched: "bg-violet-500/20 text-violet-300 border-violet-500/30",
   watching: "bg-blossom-500/20 text-blossom-300 border-blossom-500/30",
   want_to_watch: "bg-lunar-700/40 text-lunar-300 border-lunar-600/30",
@@ -25,11 +40,15 @@ export const STATUS_COLORS: Record<MediaStatus | "want_to_cook" | "cooked", stri
   on_hold: "bg-lunar-600/20 text-lunar-400 border-lunar-600/30",
   want_to_cook: "bg-lunar-700/40 text-lunar-300 border-lunar-600/30",
   cooked: "bg-violet-500/20 text-violet-300 border-violet-500/30",
-} as Record<MediaStatus, string>;
+};
 
-export const TYPE_LABELS: Record<MediaType | "recipe", string> = {
+/**
+ * Human-readable display labels for every media type.
+ * Used in dashboard type tabs, command palette groupings, and card badges.
+ */
+export const TYPE_LABELS: Record<MediaType, string> = {
   movie: "Movie",
   series: "Series",
   book: "Book",
   recipe: "Recipe",
-} as Record<MediaType, string>;
+};
