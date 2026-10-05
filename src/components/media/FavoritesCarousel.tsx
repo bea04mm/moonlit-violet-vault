@@ -34,14 +34,14 @@ export function FavoritesCarousel({ items }: { items: MediaItem[] }) {
 
   return (
     <div 
-      className="overflow-hidden" 
+      className="overflow-hidden px-[calc(7.5vw-1rem)] sm:px-[calc((100%-26rem)/2)] md:px-0"
       ref={emblaRef}
     >
-      <div className="flex pb-4 -ml-4">
+      <div className="flex pb-4">
         {displayItems.map((item, index) => (
           <div 
             key={`${item.id}-${index}`} 
-            className="w-[85vw] sm:w-92 md:w-104 h-40 sm:h-48 shrink-0 pl-4"
+            className="mr-4 w-[85vw] sm:w-92 md:w-[calc((100%-1rem)/2)] xl:w-[calc((100%-2rem)/3)] h-40 sm:h-48 shrink-0"
           >
             <MediaCard item={item} disableGestures={true} priority={index < 3} />
           </div>
@@ -50,4 +50,3 @@ export function FavoritesCarousel({ items }: { items: MediaItem[] }) {
     </div>
   );
 }
-

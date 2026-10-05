@@ -379,7 +379,7 @@ export function MediaCard({ item, disableGestures = false, priority = false }: M
           </p>
         )}
 
-        <div className="flex flex-col mt-auto pt-1 gap-2 w-full overflow-hidden">
+        <div className="flex flex-col mt-auto gap-2 w-full overflow-hidden">
           {/* Synopsis Snippet */}
           {!(item.type === "series" && isWatchingSeries && !isDashboard) && item.synopsis && (
             <p className={`text-[11px] text-lunar-400 leading-relaxed ${item.type === "book" ? "line-clamp-3" : "line-clamp-3 sm:line-clamp-4"}`}>
