@@ -3,11 +3,11 @@
  * 
  * @packageDocumentation
  */
-/* eslint-disable react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization, @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/preserve-manual-memoization, @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import type { MediaItem, MediaType } from "@/lib/supabase/database.types";
 import { MediaGrid } from "./MediaGrid";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,46 @@ export interface TabbedDashboardProps {
   type: MediaType;
   items: MediaItem[];
   headerNode?: React.ReactNode;
+}
+
+export interface TabbedDashboardLoadingProps {
+  headerNode: React.ReactNode;
+  tabs: string[];
+}
+
+export function TabbedDashboardLoading({
+  headerNode,
+  tabs,
+}: TabbedDashboardLoadingProps) {
+  return (
+    <div
+      className="sticky top-23.25 md:top-16 z-30 pb-6 pt-4 border-b border-white/10"
+      style={{
+        background: "color-mix(in srgb, var(--color-lunar-950) 85%, transparent)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        marginLeft: "calc(50% - 50vw)",
+        marginRight: "calc(50% - 50vw)",
+        paddingLeft: "calc(50vw - 50%)",
+        paddingRight: "calc(50vw - 50%)",
+      }}
+    >
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        {headerNode}
+        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-4">
+          <div className="flex flex-nowrap gap-2">
+            {tabs.map((tab) => (
+              <div
+                key={tab}
+                className="h-10 w-28 shrink-0 animate-pulse rounded-full bg-lunar-900"
+              />
+            ))}
+          </div>
+          <div className="h-10 w-44 shrink-0 animate-pulse rounded-xl bg-lunar-900" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -76,10 +116,6 @@ export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProp
   });
 
   /**
-   * Next.js router instance for handling client-side navigation.
-   */
-  const router = useRouter();
-  /**
    * Next.js hook for accessing the current URL search parameters.
    */
   const searchParams = useSearchParams();
@@ -102,13 +138,20 @@ export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProp
   const [sortBy, setSortBy] = useState<"date_added" | "title" | "release_year" | "user_rating">("date_added");
 
   useEffect(() => {
-    if (urlTab && urlTab !== activeTabId && activeTabs.some(t => t.id === urlTab)) {
-      setActiveTabId(urlTab);
-    }
-  }, [urlTab, activeTabs, activeTabId]);
+    const handlePopState = () => {
+      const nextTab = new URLSearchParams(window.location.search).get("tab");
+      if (nextTab && activeTabs.some((tab) => tab.id === nextTab)) {
+        setActiveTabId(nextTab);
+        setSelectedTags([]);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [activeTabs]);
 
   /**
-   * Changes the active tab, clears selected tags, and updates the URL query string without scrolling.
+   * Changes the active tab, updates the URL without a route transition, and returns to the page top.
    */
   const handleTabChange = (tabId: string) => {
     setActiveTabId(tabId);
@@ -118,7 +161,12 @@ export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProp
      */
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tabId);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${pathname}?${params.toString()}`
+    );
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   /**
@@ -154,10 +202,29 @@ export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProp
 
   return (
     <div className="flex flex-col gap-8 w-full">
-      {/* Header Row: Tabs + Sort */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-lunar-800 pb-4">
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap gap-2">
+      <div
+        className={headerNode ? "sticky top-23.25 md:top-16 z-30 pb-6 pt-4 border-b border-white/10" : undefined}
+        style={
+          headerNode
+            ? {
+                background: "color-mix(in srgb, var(--color-lunar-950) 85%, transparent)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                marginLeft: "calc(50% - 50vw)",
+                marginRight: "calc(50% - 50vw)",
+                paddingLeft: "calc(50vw - 50%)",
+                paddingRight: "calc(50vw - 50%)",
+              }
+            : undefined
+        }
+      >
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+          {headerNode}
+
+          {/* Header Row: Tabs + Sort */}
+          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-4">
+            {/* Tab Navigation */}
+            <div className="flex flex-nowrap gap-2">
           {activeTabs.map((tab) => {
             const count = items.filter(tab.filterFn).length;
             const isActive = activeTabId === tab.id;
@@ -165,7 +232,7 @@ export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProp
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer ${
                   isActive
                     ? "bg-(--color-violet-500) text-white shadow-(--shadow-glow-sm)"
                     : "bg-(--color-lunar-900) text-lunar-400 hover:bg-lunar-800 hover:text-lunar-200"
@@ -178,19 +245,21 @@ export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProp
               </button>
             );
           })}
-        </div>
+            </div>
 
-        {/* Sorting Dropdown */}
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as any)}
-          className="bg-(--color-lunar-900) text-lunar-200 text-sm rounded-xl px-4 py-2 border border-lunar-800 focus:outline-none focus:border-(--color-violet-500) cursor-pointer"
-        >
-          <option value="date_added">Recently Added</option>
-          <option value="title">Title (A-Z)</option>
-          <option value="release_year">Release Year (Newest)</option>
-          <option value="user_rating">My Rating (Highest)</option>
-        </select>
+            {/* Sorting Dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="shrink-0 bg-(--color-lunar-900) text-lunar-200 text-sm rounded-xl px-4 py-2 border border-lunar-800 focus:outline-none focus:border-(--color-violet-500) cursor-pointer"
+            >
+              <option value="date_added">Recently Added</option>
+              <option value="title">Title (A-Z)</option>
+              <option value="release_year">Release Year (Newest)</option>
+              <option value="user_rating">My Rating (Highest)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Tag Filters */}

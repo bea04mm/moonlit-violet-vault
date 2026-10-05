@@ -8,7 +8,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getMediaList } from "@/lib/services/mediaService";
-import { TabbedDashboard } from "@/components/media/TabbedDashboard";
+import { TabbedDashboard, TabbedDashboardLoading } from "@/components/media/TabbedDashboard";
 import { MediaCardSkeleton } from "@/components/ui/Skeleton";
 import MovieIcon from "@mui/icons-material/Movie";
 
@@ -66,22 +66,12 @@ export default function MoviesPage() {
       <Suspense
         fallback={
           <div>
-            <div 
-              className="sticky top-23.25 md:top-16 z-30 pb-6 pt-4 border-b border-white/10" 
-              style={{
-                background: "color-mix(in srgb, var(--color-lunar-950) 85%, transparent)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                marginLeft: "calc(50% - 50vw)",
-                marginRight: "calc(50% - 50vw)",
-                paddingLeft: "calc(50vw - 50%)",
-                paddingRight: "calc(50vw - 50%)",
-              }}
-            >
-              {headerNode}
-            </div>
+            <TabbedDashboardLoading
+              headerNode={headerNode}
+              tabs={["Want to Watch", "Watching", "Watched", "Other"]}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-8">
-              {[...Array(6)].map((_, i) => (
+              {[...Array(9)].map((_, i) => (
                 <MediaCardSkeleton key={i} />
               ))}
             </div>
