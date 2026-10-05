@@ -1,10 +1,21 @@
-// src/components/ui/Skeleton.tsx
-// Animated loading skeleton — used in Suspense fallbacks.
-
-interface SkeletonProps {
+/**
+ * Reusable animated placeholder components for loading states.
+ *
+ * @packageDocumentation
+ */
+/**
+ * The properties available to customize a generic Skeleton.
+ */
+export interface SkeletonProps {
   className?: string;
 }
 
+/**
+ * A basic generic loading placeholder with a shimmering animation.
+ *
+ * @param props - Customization properties.
+ * @param props.className - Tailwind classes to specify width, height, and overrides.
+ */
 export function Skeleton({ className = "" }: SkeletonProps) {
   return (
     <div
@@ -20,10 +31,13 @@ export function Skeleton({ className = "" }: SkeletonProps) {
   );
 }
 
+/**
+ * Animated loading skeleton — used in Suspense fallbacks.
+ */
 export function MediaCardSkeleton() {
   return (
     <div
-      className="flex flex-row h-[168px] sm:h-[192px] rounded-3xl overflow-hidden border w-full"
+      className="flex flex-row h-40 sm:h-48 rounded-3xl overflow-hidden border w-full"
       style={{
         background: "var(--color-lunar-950)",
         borderColor: "color-mix(in srgb, var(--color-violet-500) 15%, transparent)",
