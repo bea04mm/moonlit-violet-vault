@@ -1,30 +1,50 @@
-// src/app/login/page.tsx
-// Login page — the only publicly accessible route.
-// Presents a Google OAuth sign-in button with the vault aesthetic.
-
+/**
+ * Public login page — the only page accessible without a valid session.
+ * Renders the Google OAuth login button and displays error messages passed
+ * via the `?error=` search parameter (e.g. "unauthorised_email").
+ * Also shows a feature list to remind me what the vault can do.
+ * 
+ * @packageDocumentation
+ */
 import type { Metadata } from "next";
 import { LoginButton } from "@/components/auth/LoginButton";
 import NightlightIcon from "@mui/icons-material/Nightlight";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 
+/**
+ * Metadata specifically for the login page, configuring title and description.
+ */
 export const metadata: Metadata = {
   title: "Sign In",
   description: "Sign in to access the personal media vault.",
 };
 
-interface LoginPageProps {
+/**
+ * Interface defining the properties expected by the LoginPage component.
+ */
+export interface LoginPageProps {
   searchParams: Promise<{ error?: string }>;
 }
 
+/**
+ * Login page — the only publicly accessible route.
+ * Presents a Google OAuth sign-in button with the vault aesthetic.
+ */
 export default async function LoginPage({ searchParams }: LoginPageProps) {
+  /**
+   * The resolved search parameters from the Next.js server-side page context.
+   */
   const params = await searchParams;
+  /**
+   * The optional error code passed in the query string if an authentication failure occurs.
+   */
   const error = params.error;
 
   return (
     <main className="min-h-screen flex items-center justify-center vault-gradient px-4">
       {/* Decorative orbs */}
       <div
-        className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-20 blur-3xl"
+        className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-150 h-100 rounded-full opacity-20 blur-3xl"
         style={{
           background:
             "radial-gradient(ellipse, var(--color-violet-500) 0%, transparent 70%)",
@@ -32,7 +52,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none fixed bottom-0 right-0 w-[400px] h-[300px] rounded-full opacity-10 blur-3xl"
+        className="pointer-events-none fixed bottom-0 right-0 w-100 h-75 rounded-full opacity-10 blur-3xl"
         style={{
           background:
             "radial-gradient(ellipse, var(--color-blossom-400) 0%, transparent 70%)",
@@ -43,7 +63,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="relative z-10 w-full max-w-sm">
         {/* Logo / title */}
         <div className="text-center mb-10">
-          <div className="flex justify-center mb-4 text-[var(--color-violet-400)]" aria-hidden="true">
+          <div className="flex justify-center mb-4 text-violet-400" aria-hidden="true">
             <NightlightIcon style={{ fontSize: 56 }} />
           </div>
           <h1

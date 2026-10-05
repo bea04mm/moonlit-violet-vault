@@ -1,17 +1,28 @@
-// src/components/auth/LoginButton.tsx
-// Interactive Google OAuth sign-in button — 'use client' because it calls
-// the Supabase browser client and handles a user click event.
-
+/**
+ * Interactive Google OAuth sign-in button.
+ * 
+ * @packageDocumentation
+ */
 "use client";
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+/**
+ * Interactive Google OAuth sign-in button — 'use client' because it calls
+ * the Supabase browser client and handles a user click event.
+ */
 export function LoginButton() {
   const [isLoading, setIsLoading] = useState(false);
 
+  /**
+   * Triggers the Google OAuth sign-in flow via Supabase.
+   */
   async function handleGoogleSignIn() {
     setIsLoading(true);
+    /**
+     * Initialized Supabase client.
+     */
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -73,6 +84,9 @@ export function LoginButton() {
   );
 }
 
+/**
+ * SVG component rendering the official Google "G" logo.
+ */
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -96,6 +110,9 @@ function GoogleIcon() {
   );
 }
 
+/**
+ * Simple animated SVG spinner for loading states.
+ */
 function LoadingSpinner() {
   return (
     <svg

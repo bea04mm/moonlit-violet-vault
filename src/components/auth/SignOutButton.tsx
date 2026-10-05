@@ -1,16 +1,30 @@
-// src/components/auth/SignOutButton.tsx
-// Client component — needs 'use client' because it calls Supabase browser client
-// and uses router.refresh() after sign-out.
-
+/**
+ * Interactive sign-out button that clears the Supabase session.
+ * 
+ * @packageDocumentation
+ */
 "use client";
 
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+/**
+ * Client component — needs 'use client' because it calls Supabase browser client
+ * and uses router.refresh() after sign-out.
+ */
 export function SignOutButton() {
+  /**
+   * Next.js App Router navigation instance.
+   */
   const router = useRouter();
 
+  /**
+   * Signs the user out via Supabase and redirects them to the login page.
+   */
   async function handleSignOut() {
+    /**
+     * Initialized Supabase client.
+     */
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -20,7 +34,7 @@ export function SignOutButton() {
     <button
       id="sign-out-btn"
       onClick={handleSignOut}
-      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150"
+      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors duration-150 cursor-pointer"
       style={{ color: "var(--color-lunar-500)" }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLElement).style.color =
@@ -40,6 +54,9 @@ export function SignOutButton() {
   );
 }
 
+/**
+ * SVG component representing a sign-out icon.
+ */
 function SignOutIcon() {
   return (
     <svg
