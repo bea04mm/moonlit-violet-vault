@@ -1,3 +1,9 @@
+/**
+ * Renders the dashboard charts (Recharts) for library breakdown and time invested.
+ * 
+ * @packageDocumentation
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
@@ -20,10 +26,23 @@ import TvIcon from "@mui/icons-material/Tv";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
-interface Props {
+/**
+ * Props for the AnalyticsCharts component.
+ */
+export interface Props {
+  /**
+   * Aggregated analytics data prepared by the server.
+   */
   data: AnalyticsData;
 }
 
+/**
+ * Custom tooltip component for rendering Recharts data.
+ * Displays the name and value of the hovered chart segment in a styled glass-morphism container.
+ *
+ * @param props - Tooltip props provided by Recharts.
+ * @returns The formatted tooltip element, or null if inactive.
+ */
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -43,7 +62,14 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+/**
+ * Renders interactive Recharts pie/bar charts and the entry point
+ * button for the Vault Wrapped slideshow.
+ */
 export function AnalyticsCharts({ data }: Props) {
+  /**
+   * The current year used to pre-fill the vault wrapped link.
+   */
   const currentYear = new Date().getFullYear();
 
   return (
@@ -51,18 +77,18 @@ export function AnalyticsCharts({ data }: Props) {
       
       {/* Vault Wrapped Launcher */}
       <Link href={`/wrapped?year=${currentYear}`} className="block">
-        <div className="glass-card rounded-3xl p-6 sm:p-8 border-2 border-[var(--color-violet-500)]/30 bg-gradient-to-r from-[var(--color-violet-900)]/20 to-[var(--color-starlight-900)]/10 flex items-center justify-between group hover:border-[var(--color-violet-500)] transition-all overflow-hidden relative shadow-[0_0_30px_rgba(157,77,255,0.1)] hover:shadow-[0_0_50px_rgba(157,77,255,0.2)]">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-violet-500)]/10 blur-[80px] rounded-full transform translate-x-1/2 -translate-y-1/2" />
+        <div className="glass-card rounded-3xl p-6 sm:p-8 border-2 border-(--color-violet-500)/30 bg-linear-to-r from-violet-900/20 to-(--color-starlight-900)/10 flex items-center justify-between group hover:border-(--color-violet-500) transition-all overflow-hidden relative shadow-[0_0_30px_rgba(157,77,255,0.1)] hover:shadow-[0_0_50px_rgba(157,77,255,0.2)]">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-(--color-violet-500)/10 blur-[80px] rounded-full transform translate-x-1/2 -translate-y-1/2" />
           <div className="relative z-10 flex flex-col">
             <h2 className="text-2xl sm:text-3xl font-display font-bold text-white flex items-center gap-2">
               <AutoAwesomeIcon sx={{ color: "var(--color-violet-400)" }} /> 
               {currentYear} Vault Wrapped
             </h2>
-            <p className="text-[var(--color-lunar-300)] mt-2 max-w-sm">
-              Discover your top genres, favorite titles, and how much time you spent escaping reality this year.
+            <p className="text-lunar-300 mt-2 max-w-sm">
+              Discover top genres, favorite titles, and how much time was spent escaping reality this year.
             </p>
           </div>
-          <div className="relative z-10 hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-[var(--color-violet-600)] text-white group-hover:scale-110 transition-transform">
+          <div className="relative z-10 hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-violet-600 text-white group-hover:scale-110 transition-transform">
             <span className="font-bold text-xl">→</span>
           </div>
         </div>
@@ -161,10 +187,19 @@ export function AnalyticsCharts({ data }: Props) {
   );
 }
 
+/**
+ * Reusable component for displaying an individual statistic in a stylized box.
+ * Features an icon, the primary value, and a descriptive label.
+ *
+ * @param props - The properties for the StatBox component.
+ * @param props.label - A short description of the statistic.
+ * @param props.value - The statistic's value (e.g., hours or count).
+ * @param props.icon - The Material UI icon element to display.
+ */
 function StatBox({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
     <div className="glass-card rounded-2xl p-5 flex flex-col gap-1" style={{ boxShadow: "var(--shadow-card)" }}>
-      <span className="mb-1 flex items-center justify-center w-8 h-8 rounded-lg bg-[color-mix(in_srgb,var(--color-violet-500)_15%,transparent)] text-[var(--color-violet-400)]">{icon}</span>
+      <span className="mb-1 flex items-center justify-center w-8 h-8 rounded-lg bg-[color-mix(in_srgb,var(--color-violet-500)_15%,transparent)] text-violet-400">{icon}</span>
       <p className="text-2xl font-display font-bold" style={{ color: "var(--color-violet-300)", fontFamily: "var(--font-display)" }}>
         {value}
       </p>

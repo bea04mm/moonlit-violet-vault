@@ -1,3 +1,9 @@
+/**
+ * Full-screen slideshow presentation mimicking Spotify Wrapped.
+ * Powered by Framer Motion for slide transitions.
+ * 
+ * @packageDocumentation
+ */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,26 +19,54 @@ import StarIcon from "@mui/icons-material/Star";
 import Image from "next/image";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 
-interface Props {
+/**
+ * Props for the WrappedPresentation component.
+ */
+export interface Props {
+  /**
+   * VaultWrappedData object computed on the server for the requested year.
+   */
   data: VaultWrappedData;
 }
 
+/**
+ * A full-screen interactive slideshow for "Vault Wrapped".
+ * Handles keyboard navigation (Arrow keys, Enter, Space, Escape) internally.
+ */
 export function WrappedPresentation({ data }: Props) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  /**
+   * Advances the slideshow to the next slide, clamping to the final slide index.
+   */
   const nextSlide = () => setCurrentSlide((prev) => Math.min(prev + 1, slides.length - 1));
+  /**
+   * Returns the slideshow to the previous slide, clamping to the initial slide index (0).
+   */
   const prevSlide = () => setCurrentSlide((prev) => Math.max(prev - 1, 0));
 
   useEffect(() => {
+    /**
+     * Handles keyboard events for navigation through the wrapped presentation.
+     * Maps arrow keys, enter, and spacebar to next/prev actions, and Escape to closing the presentation.
+     * 
+     * @param e - The keyboard event triggered by the user.
+     */
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === " ") nextSlide();
       if (e.key === "ArrowLeft") prevSlide();
+      if (e.key === "Enter") nextSlide();
       if (e.key === "Escape") window.history.back();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * Collection of slides rendered in the presentation. Each slide contains unique 
+   * animations and statistics representing user data for the year.
+   */
   const slides = [
     // Slide 0: Intro
     <div key="intro" className="flex flex-col items-center justify-center h-auto my-auto py-8 text-center space-y-6 px-6 relative z-30">
@@ -40,7 +74,7 @@ export function WrappedPresentation({ data }: Props) {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="w-24 h-24 rounded-full bg-[var(--color-violet-500)]/20 flex items-center justify-center text-[var(--color-violet-300)] shadow-[0_0_60px_rgba(157,77,255,0.4)]"
+        className="w-24 h-24 rounded-full bg-(--color-violet-500)/20 flex items-center justify-center text-violet-300 shadow-[0_0_60px_rgba(157,77,255,0.4)]"
       >
         <AutoAwesomeIcon sx={{ fontSize: 48 }} />
       </motion.div>
@@ -50,13 +84,13 @@ export function WrappedPresentation({ data }: Props) {
         transition={{ delay: 0.3, duration: 0.8 }}
         className="text-5xl md:text-7xl font-display font-bold text-gradient-violet leading-tight"
       >
-        Your {data.year} <br/> Vault Wrapped
+        {data.year} <br/> Vault Wrapped
       </motion.h1>
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8 }}
-        className="text-xl text-[var(--color-lunar-300)]"
+        className="text-xl text-lunar-300"
       >
         Let&apos;s look back at the worlds you explored.
       </motion.p>
@@ -65,7 +99,7 @@ export function WrappedPresentation({ data }: Props) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.2 }}
         onClick={nextSlide}
-        className="relative mt-8 px-8 py-4 rounded-full bg-[var(--color-violet-600)] hover:bg-[var(--color-violet-500)] text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(157,77,255,0.3)] flex items-center gap-2 pointer-events-auto"
+        className="relative mt-8 px-8 py-4 rounded-full bg-violet-600 hover:bg-(--color-violet-500) text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(157,77,255,0.3)] flex items-center gap-2 pointer-events-auto"
       >
         Start <PlayArrowIcon />
       </motion.button>
@@ -76,7 +110,7 @@ export function WrappedPresentation({ data }: Props) {
       <motion.h2 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-5xl font-display font-bold text-[var(--color-lunar-50)]"
+        className="text-3xl md:text-5xl font-display font-bold text-lunar-50"
       >
         This year, you escaped reality <br/>
         <span className="text-gradient-violet text-6xl md:text-8xl block mt-4">{data.totalFinished}</span> times.
@@ -93,11 +127,11 @@ export function WrappedPresentation({ data }: Props) {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.4 + (i * 0.2), type: "spring" }}
-            className="glass-card p-6 rounded-3xl border border-[var(--color-lunar-800)] flex flex-col items-center flex-1 min-w-[120px]"
+            className="glass-card p-6 rounded-3xl border border-lunar-800 flex flex-col items-center flex-1 min-w-30"
           >
             <div style={{ color: item.color }} className="mb-2">{item.icon}</div>
             <div className="text-3xl font-bold text-white">{item.count}</div>
-            <div className="text-sm text-[var(--color-lunar-500)] uppercase tracking-wider font-semibold">{item.label}</div>
+            <div className="text-sm text-lunar-500 uppercase tracking-wider font-semibold">{item.label}</div>
           </motion.div>
         ))}
       </div>
@@ -108,7 +142,7 @@ export function WrappedPresentation({ data }: Props) {
       <motion.h2 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="text-3xl md:text-5xl font-display font-bold text-[var(--color-lunar-50)] leading-tight"
+        className="text-3xl md:text-5xl font-display font-bold text-lunar-50 leading-tight"
       >
         That&apos;s a lot of time <br/> spent in other worlds.
       </motion.h2>
@@ -118,14 +152,14 @@ export function WrappedPresentation({ data }: Props) {
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="glass-card p-6 rounded-3xl border border-[var(--color-violet-500)]/30 bg-[var(--color-violet-500)]/5 flex items-center gap-6"
+          className="glass-card p-6 rounded-3xl border border-(--color-violet-500)/30 bg-(--color-violet-500)/5 flex items-center gap-6"
         >
-          <div className="w-16 h-16 rounded-full bg-[var(--color-violet-500)]/20 flex items-center justify-center text-[var(--color-violet-400)] shrink-0">
+          <div className="w-16 h-16 rounded-full bg-(--color-violet-500)/20 flex items-center justify-center text-violet-400 shrink-0">
             <AccessTimeIcon fontSize="large" />
           </div>
           <div>
-            <div className="text-4xl font-bold text-white">{data.moviesHours + data.seriesHours} <span className="text-xl text-[var(--color-lunar-400)] font-normal">hours</span></div>
-            <div className="text-sm text-[var(--color-violet-300)] mt-1">Watching movies & series</div>
+            <div className="text-4xl font-bold text-white">{data.moviesHours + data.seriesHours} <span className="text-xl text-lunar-400 font-normal">hours</span></div>
+            <div className="text-sm text-violet-300 mt-1">Watching movies & series</div>
           </div>
         </motion.div>
 
@@ -133,14 +167,14 @@ export function WrappedPresentation({ data }: Props) {
           initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="glass-card p-6 rounded-3xl border border-[var(--color-starlight-500)]/30 bg-[var(--color-starlight-500)]/5 flex items-center gap-6"
+          className="glass-card p-6 rounded-3xl border border-starlight-500/30 bg-starlight-500/5 flex items-center gap-6"
         >
-          <div className="w-16 h-16 rounded-full bg-[var(--color-starlight-500)]/20 flex items-center justify-center text-[var(--color-starlight-400)] shrink-0">
+          <div className="w-16 h-16 rounded-full bg-starlight-500/20 flex items-center justify-center text-starlight-400 shrink-0">
             <MenuBookIcon fontSize="large" />
           </div>
           <div>
-            <div className="text-4xl font-bold text-white">{data.booksPages.toLocaleString()} <span className="text-xl text-[var(--color-lunar-400)] font-normal">pages</span></div>
-            <div className="text-sm text-[var(--color-starlight-300)] mt-1">Read across all books</div>
+            <div className="text-4xl font-bold text-white">{data.booksPages.toLocaleString()} <span className="text-xl text-lunar-400 font-normal">pages</span></div>
+            <div className="text-sm text-(--color-starlight-300) mt-1">Read across all books</div>
           </div>
         </motion.div>
       </div>
@@ -151,9 +185,9 @@ export function WrappedPresentation({ data }: Props) {
       <motion.h2 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-5xl font-display font-bold text-[var(--color-lunar-50)]"
+        className="text-3xl md:text-5xl font-display font-bold text-lunar-50"
       >
-        Your vibe was definitely...
+        The vibe was definitely...
       </motion.h2>
       <div className="w-full max-w-md space-y-4">
         {data.topGenres.length > 0 ? data.topGenres.map((g, i) => (
@@ -162,17 +196,17 @@ export function WrappedPresentation({ data }: Props) {
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: "100%", opacity: 1 }}
             transition={{ delay: 0.3 + (i * 0.15), duration: 0.6 }}
-            className="flex items-center justify-between p-4 rounded-2xl bg-[var(--color-lunar-800)]/50 border border-[var(--color-lunar-800)] relative overflow-hidden"
+            className="flex items-center justify-between p-4 rounded-2xl bg-lunar-800/50 border border-lunar-800 relative overflow-hidden"
           >
             <div 
-              className="absolute left-0 top-0 bottom-0 bg-[var(--color-violet-500)]/20" 
+              className="absolute left-0 top-0 bottom-0 bg-(--color-violet-500)/20" 
               style={{ width: `${(g.count / data.topGenres[0].count) * 100}%` }}
             />
             <span className="text-lg font-bold text-white z-10 truncate mr-3 flex-1 text-left">{g.name}</span>
-            <span className="text-sm font-semibold text-[var(--color-violet-300)] z-10 whitespace-nowrap">{g.count} titles</span>
+            <span className="text-sm font-semibold text-violet-300 z-10 whitespace-nowrap">{g.count} titles</span>
           </motion.div>
         )) : (
-          <p className="text-[var(--color-lunar-400)]">Not enough data yet. Read or watch more!</p>
+          <p className="text-lunar-400">Not enough data yet. Read or watch more!</p>
         )}
       </div>
     </div>,
@@ -182,11 +216,11 @@ export function WrappedPresentation({ data }: Props) {
       <motion.h2 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-5xl font-display font-bold text-[var(--color-lunar-50)] leading-tight"
+        className="text-3xl md:text-5xl font-display font-bold text-lunar-50 leading-tight"
       >
         The absolute best of the year.
       </motion.h2>
-      <p className="text-[var(--color-lunar-400)] text-sm max-w-sm mx-auto">Your highest rated discoveries.</p>
+      <p className="text-lunar-400 text-sm max-w-sm mx-auto">Highest rated discoveries.</p>
       
       <div className="grid grid-cols-3 gap-3 md:gap-6 mt-4 max-w-2xl w-full">
         {data.topItems.length > 0 ? data.topItems.slice(0, 3).map((item, i) => (
@@ -195,26 +229,26 @@ export function WrappedPresentation({ data }: Props) {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2 + (i * 0.1) }}
-            className="aspect-[2/3] rounded-2xl overflow-hidden relative shadow-lg group"
+            className="aspect-2/3 rounded-2xl overflow-hidden relative shadow-lg group"
           >
             {item.cover_url ? (
               <Image src={item.cover_url} alt={item.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover" unoptimized />
             ) : (
-              <div className="w-full h-full bg-[var(--color-lunar-800)] flex items-center justify-center p-4 text-center">
+              <div className="w-full h-full bg-lunar-800 flex items-center justify-center p-4 text-center">
                 <span className="text-sm font-bold opacity-50">{item.title}</span>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 opacity-100">
+            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 opacity-100">
               <span className="text-white font-bold text-sm truncate">{item.title}</span>
               {item.user_rating && (
-                <span className="text-[var(--color-starlight-400)] text-xs font-bold flex items-center gap-1 mt-1">
+                <span className="text-starlight-400 text-xs font-bold flex items-center gap-1 mt-1">
                   <StarIcon sx={{ fontSize: 14 }} /> {item.user_rating}/5
                 </span>
               )}
             </div>
           </motion.div>
         )) : (
-          <p className="text-[var(--color-lunar-400)] col-span-full">Rate some titles to see your top picks!</p>
+          <p className="text-lunar-400 col-span-full">Rate some titles to see top picks!</p>
         )}
       </div>
     </div>,
@@ -233,28 +267,28 @@ export function WrappedPresentation({ data }: Props) {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="glass-card p-8 rounded-[2rem] border-2 border-[var(--color-violet-500)] max-w-sm w-full bg-gradient-to-b from-[var(--color-violet-900)]/40 to-[var(--color-lunar-950)] text-left shadow-[0_0_50px_rgba(157,77,255,0.2)]"
+        className="glass-card p-8 rounded-4xl border-2 border-(--color-violet-500) max-w-sm w-full bg-linear-to-b from-violet-900/40 to-(--color-lunar-950) text-left shadow-[0_0_50px_rgba(157,77,255,0.2)]"
       >
-        <div className="flex items-center gap-2 mb-6 text-[var(--color-violet-300)]">
+        <div className="flex items-center gap-2 mb-6 text-violet-300">
           <AutoAwesomeIcon /> <span className="font-bold tracking-widest uppercase text-sm">Vault Wrapped {data.year}</span>
         </div>
         
         <div className="space-y-4">
-          <div className="flex justify-between items-end border-b border-[var(--color-lunar-800)] pb-2">
-            <span className="text-[var(--color-lunar-400)] text-sm uppercase">Total Escapes</span>
+          <div className="flex justify-between items-end border-b border-lunar-800 pb-2">
+            <span className="text-lunar-400 text-sm uppercase">Total Escapes</span>
             <span className="text-2xl font-bold text-white">{data.totalFinished}</span>
           </div>
-          <div className="flex justify-between items-end border-b border-[var(--color-lunar-800)] pb-2">
-            <span className="text-[var(--color-lunar-400)] text-sm uppercase">Screen Time</span>
+          <div className="flex justify-between items-end border-b border-lunar-800 pb-2">
+            <span className="text-lunar-400 text-sm uppercase">Screen Time</span>
             <span className="text-xl font-bold text-white">{data.moviesHours + data.seriesHours}h</span>
           </div>
-          <div className="flex justify-between items-end border-b border-[var(--color-lunar-800)] pb-2">
-            <span className="text-[var(--color-lunar-400)] text-sm uppercase">Pages Read</span>
+          <div className="flex justify-between items-end border-b border-lunar-800 pb-2">
+            <span className="text-lunar-400 text-sm uppercase">Pages Read</span>
             <span className="text-xl font-bold text-white">{data.booksPages.toLocaleString()}</span>
           </div>
           <div className="flex justify-between items-end pt-2">
-            <span className="text-[var(--color-lunar-400)] text-sm uppercase whitespace-nowrap">Top Vibe</span>
-            <span className="text-lg font-bold text-[var(--color-violet-400)] truncate ml-4 text-right">{data.topGenres[0]?.name || "Unknown"}</span>
+            <span className="text-lunar-400 text-sm uppercase whitespace-nowrap">Top Vibe</span>
+            <span className="text-lg font-bold text-violet-400 truncate ml-4 text-right">{data.topGenres[0]?.name || "Unknown"}</span>
           </div>
         </div>
       </motion.div>
@@ -262,19 +296,19 @@ export function WrappedPresentation({ data }: Props) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-[var(--color-lunar-950)] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-(--color-lunar-950) flex flex-col overflow-hidden">
       {/* Background ambient glows */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[var(--color-violet-500)]/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[var(--color-starlight-500)]/10 blur-[150px] rounded-full" />
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-(--color-violet-500)/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-starlight-500/10 blur-[150px] rounded-full" />
       </div>
 
       {/* Progress Bars */}
       <div className="absolute top-4 left-4 right-4 z-50 flex gap-2">
         {slides.map((_, i) => (
-          <div key={i} className="h-1.5 flex-1 bg-[var(--color-lunar-800)] rounded-full overflow-hidden">
+          <div key={i} className="h-1.5 flex-1 bg-lunar-800 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-[var(--color-violet-400)] transition-all duration-300"
+              className="h-full bg-violet-400 transition-all duration-300"
               style={{ width: i <= currentSlide ? '100%' : '0%' }}
             />
           </div>
@@ -300,13 +334,13 @@ export function WrappedPresentation({ data }: Props) {
       {/* Navigation Areas (Left/Right Tap) */}
       <div className="absolute inset-0 z-20 flex pt-12">
         <button className="flex-1 h-full cursor-w-resize focus:outline-none focus-visible:bg-white/5" onClick={prevSlide} aria-label="Previous slide" />
-        <button className="flex-[2] h-full cursor-e-resize focus:outline-none focus-visible:bg-white/5" onClick={nextSlide} aria-label="Next slide" />
+        <button className="flex-2 h-full cursor-e-resize focus:outline-none focus-visible:bg-white/5" onClick={nextSlide} aria-label="Next slide" />
       </div>
 
       {/* Exit Button */}
       <button 
         onClick={() => window.history.back()}
-        className="absolute top-8 right-6 z-50 text-[var(--color-lunar-400)] hover:text-white font-bold tracking-wider text-sm uppercase cursor-pointer pointer-events-auto"
+        className="absolute top-8 right-6 z-50 text-lunar-400 hover:text-white font-bold tracking-wider text-sm uppercase cursor-pointer pointer-events-auto"
       >
         Close
       </button>
