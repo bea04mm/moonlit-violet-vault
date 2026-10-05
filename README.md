@@ -7,13 +7,11 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=black)
-![Python](https://img.shields.io/badge/Python_3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-**A personal media management sanctuary for movies, TV series, and books.**
-*Built as a portfolio piece — clean architecture, cute violet aesthetics, smart data pipelines.*
+**A personal media management sanctuary for movies, TV series, books, and recipes.**
+*Built as a portfolio piece — clean architecture, cute violet aesthetics, smart data pipelines all entirely within Next.js.*
 
-[Features](#-features) · [Tech Stack](#-tech-stack) · [Architecture](#-architecture) · [Design System](#-design-system) · [Setup](#-setup) · [Data Pipeline](#-data-pipeline)
+[Features](#-features) · [Tech Stack](#-tech-stack) · [Architecture](#-architecture) · [Setup](#-setup)
 
 </div>
 
@@ -30,48 +28,38 @@
 | 📊 **Vault Wrapped** | Spotify-style animated analytics & presentation of your media consumption |
 | 🪄 **In-App Import** | Upload Goodreads CSVs directly in the browser with real-time progress |
 | 🔍 **Smart Match Fixer** | Manually fix bad API matches with Google Books + OpenLibrary fallbacks |
-| 📸 **Magic AI Scanner** | Drop an Instagram screenshot → AI extracts media titles automatically (formerly OCR) |
+| 📸 **Magic AI Scanner** | Upload a book spine photo → AI extracts media titles automatically via Gemini |
 | ⭐ **Favorites Carousel** | Highlight your favorite items in a sleek horizontal swipeable carousel |
 | 📱 **Progressive Web App** | Install natively on iOS, Android, and Desktop with offline support |
 | ⚡ **Command Palette** | Press `Ctrl+K` for global instant search and navigation |
 | 🤏 **Native Gestures** | Horizontal list layout with iOS-style swipe actions (Swipe to delete/progress) |
 | 🌙 **Violet Aesthetic** | Soft violet/lilac/lunar dark-mode design with glassmorphism and Markdown support |
 | 🔒 **Private Vault** | Google OAuth + email whitelist — only you can enter |
-| 🐳 **Docker Ready** | Consistent dev & production environments |
 
 ---
 
 ## 🛠 Tech Stack
 
-### Frontend
-- **[Next.js 16](https://nextjs.org/)** (App Router, React Server Components)
-- **[React 19](https://react.dev/)** with Server Actions
+### Frontend & Backend (Next.js App Router)
+- **[Next.js 16](https://nextjs.org/)** (React Server Components, Server Actions, Route Handlers)
+- **[React 19](https://react.dev/)**
 - **[Tailwind CSS v4](https://tailwindcss.com/)** — CSS-first theme with `@theme` block
-- **[Supabase JS](https://supabase.com/docs/reference/javascript)** (`@supabase/ssr` for proper RSC cookie handling)
 - **TypeScript 5** with strict mode
 - **Bricolage Grotesque** + **Geist** display & body fonts
 
-### Backend / Data Pipeline
-- **Python 3.12** — modular CLI pipeline
+### External APIs & Integrations
 - **[TMDB API](https://developer.themoviedb.org/)** — movie & series metadata
-- **[Google Books API](https://developers.google.com/books)** & **[OpenLibrary](https://openlibrary.org/)** — book metadata, descriptions (React-Markdown rendered), and covers
-- **[Google Gemini Vision](https://ai.google.dev/)** / **[OpenAI GPT-4o Vision](https://platform.openai.com/)** — OCR title extraction from screenshots
-- **Pandas** — Goodreads CSV processing
-- **[Supabase Python](https://supabase.com/docs/reference/python/)** — database writes
-
-### Infrastructure
-- **[Supabase](https://supabase.com/)** (PostgreSQL + Auth + Row Level Security)
-- **[Docker](https://docker.com/)** + Docker Compose
-- **[Vercel](https://vercel.com/)** — frontend deployment
-- **ESLint + Prettier** — automated code quality
+- **[Google Books API](https://developers.google.com/books)** & **[OpenLibrary](https://openlibrary.org/)** — book metadata and covers
+- **[Google Gemini Vision](https://ai.google.dev/)** — AI OCR title extraction from images
+- **[Supabase](https://supabase.com/)** — PostgreSQL Database, Authentication, and `@supabase/ssr`
 
 ---
 
 ## 🏛 Architecture
 
-This project follows **Clean Architecture** principles, strictly separating concerns across layers:
+This project follows **Clean Architecture** principles, strictly separating concerns across layers entirely within Next.js:
 
-```
+```text
 ┌───────────────────────────────────────────────────────┐
 │                    UI Layer (app/)                    │
 │   Pages (RSC) → use Server Components by default      │
@@ -80,7 +68,7 @@ This project follows **Clean Architecture** principles, strictly separating conc
                        │ mutations call
 ┌──────────────────────▼────────────────────────────────┐
 │             Server Actions (lib/actions/)             │
-│   Form handling, RPCs, cache invalidation             │
+│   Form handling, OCR processing, CSV parsing          │
 └──────────────────────┬────────────────────────────────┘
                        │ logic calls
 ┌──────────────────────▼────────────────────────────────┐
@@ -102,21 +90,11 @@ This project follows **Clean Architecture** principles, strictly separating conc
 └───────────────────────────────────────────────────────┘
 ```
 
-### Component Hierarchy
-
-```
-components/
-├── ui/           Primitive design-token components (Badge, Skeleton)
-├── media/        Domain-specific components (MediaCard, MediaGrid)
-├── layout/       App shell components (Navbar)
-└── auth/         Auth-specific components (LoginButton, SignOutButton)
-```
-
 **Rules:**
 - Pages are thin — they call services and pass data to components
 - Components never import Supabase directly
 - `'use client'` is used only when browser APIs or state are genuinely needed
-- Auth is enforced at two levels: middleware (all routes) + Supabase RLS (database)
+- Auth is enforced at two levels: `proxy.ts` middleware (all routes) + Supabase RLS (database)
 
 ---
 
@@ -124,27 +102,9 @@ components/
 
 The **Moonlit Violet Vault** aesthetic is defined entirely in `globals.css` using Tailwind v4's CSS-first `@theme` block.
 
-### Colour Palette
-
-| Token | Value | Purpose |
-|---|---|---|
-| `--color-violet-500` | `#9d4dff` | Primary actions, glows, borders |
-| `--color-lunar-950` | `#110e1f` | Page background |
-| `--color-lunar-900` | `#1e1833` | Card backgrounds |
-| `--color-blossom-400` | `#ff70ae` | Accent highlights, errors |
-| `--color-starlight-400` | `#ffd966` | Star ratings |
-
-### Key Design Principles
 - **Glassmorphism** — `.glass-card` utility: `backdrop-filter: blur(12px)` with semi-transparent backgrounds
 - **Violet radial glow** — ambient background glow via `radial-gradient` on `body`
 - **Soft shadows** — `--shadow-card`, `--shadow-glow-*` custom shadow tokens
-- **Micro-animations** — `float`, `shimmer`, `fadeIn`, `slideUp`, `glowPulse` keyframes
-- **Rounded everything** — `rounded-2xl` / `rounded-3xl` everywhere
-
-### Typography
-- **Display** — Bricolage Grotesque (headings, titles)
-- **Body** — Geist Sans (UI text)
-- **Mono** — Geist Mono (code, IDs)
 
 ---
 
@@ -152,44 +112,37 @@ The **Moonlit Violet Vault** aesthetic is defined entirely in `globals.css` usin
 
 ### Prerequisites
 - Node.js 20+
-- Python 3.12+
-- Docker Desktop (optional, for containerised dev)
 - A [Supabase](https://supabase.com/) project
-- API keys for [TMDB](https://developer.themoviedb.org/), [Google Books](https://developers.google.com/books/docs/v1/using#APIKey), and [Google AI Studio](https://aistudio.google.com/) or [OpenAI](https://platform.openai.com/)
+- API keys for [TMDB](https://developer.themoviedb.org/), [Google Books](https://developers.google.com/books/docs/v1/using#APIKey), and [Google AI Studio (Gemini)](https://aistudio.google.com/)
 
-### 1. Clone and install
+### 1. Install
 
 ```bash
-git clone https://github.com/yourusername/moonlit-violet-vault.git
-cd moonlit-violet-vault
 npm install
 ```
 
 ### 2. Configure environment
 
+Copy the example environment file and fill in your keys:
+
 ```bash
 cp .env.example .env
-# Edit .env with your actual keys
 ```
 
 ### 3. Set up Supabase
 
 1. Create a new project at [supabase.com](https://supabase.com/)
-2. In **SQL Editor**, run the migration:
-   ```sql
-   -- Copy and run supabase/migrations/001_initial_schema.sql
-   ```
+2. In **SQL Editor**, run the migration script located in `supabase/migrations/`
 3. In **Authentication → Providers**, enable **Google** OAuth
 4. Add your Supabase URL and keys to `.env`
 
-### 4. Configure Google OAuth
+### 4. Configure Google OAuth & Whitelist
 
 In [Supabase Auth Settings](https://supabase.com/dashboard/project/_/auth/providers):
-- Enable Google provider
 - Add your Google OAuth client ID and secret
-- Set redirect URL: `https://your-project.supabase.co/auth/v1/callback`
+- Set redirect URL to your project domain or localhost
 
-In `.env`, set `ALLOWED_EMAIL=your.email@gmail.com`
+In `.env`, set `ALLOWED_EMAIL=your.email@gmail.com` to lock the vault to yourself.
 
 ### 5. Run locally
 
@@ -198,98 +151,39 @@ npm run dev
 # → http://localhost:3000
 ```
 
-### 6. Run with Docker
-
-```bash
-# Frontend only
-docker compose up frontend
-
-# Run the data pipeline
-docker compose --profile pipeline run pipeline --help
-docker compose --profile pipeline run pipeline goodreads --file /data/library.csv
-```
-
----
-
-## 🔬 Data Pipeline
-
-The Python pipeline lives in `data_pipeline/` and has three commands:
-
-### Import from Goodreads
-
-**Preferred Method:** You can now upload your Goodreads `library.csv` directly in the Web UI via the **Import Data** page (`/import`)! The app will parse, deduplicate, and fetch Google Books / OpenLibrary covers instantly.
-
-*Alternatively, via Python CLI:*
-Export your library from Goodreads: *My Books → Export library* (downloads `library.csv`)
-
-```bash
-cd data_pipeline
-pip install -r requirements.txt
-python main.py goodreads --file path/to/library.csv
-```
-
-### Extract titles from screenshots (OCR)
-
-Drop a screenshot (Instagram post, Letterboxd screencap, etc.):
-
-```bash
-python main.py ocr --image path/to/screenshot.jpg --type movie
-```
-
-The pipeline will:
-1. Send the image to **Gemini Vision** (or GPT-4o)
-2. Extract all visible media titles
-3. Search TMDB/Google Books for metadata
-4. Save enriched items to your Supabase vault
-
-### Re-enrich an existing item
-
-```bash
-python main.py enrich --id <uuid-of-item>
-```
-
-### Switch VLM provider
-
-```bash
-# In .env:
-VLM_PROVIDER=openai  # or gemini (default)
-```
-
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 moonlit-violet-vault/
 ├── src/
 │   ├── app/
 │   │   ├── (vault)/          # Protected route group (dashboard + galleries)
-│   │   │   ├── analytics/    # Analytics Dashboard
-│   │   │   ├── recipes/      # Recipe Vault
-│   │   │   └── wrapped/      # Vault Wrapped Presentation
 │   │   ├── auth/callback/    # OAuth callback Route Handler
 │   │   └── login/            # Public login page
-│   ├── components/
-│   │   ├── auth/             # LoginButton, SignOutButton
-│   │   ├── media/            # MediaCard, MediaGrid
-│   │   ├── layout/           # Navbar
-│   │   └── ui/               # Badge, Skeleton
+│   ├── components/           # UI, Media, Layout, and Auth components
 │   ├── lib/
-│   │   ├── actions/          # Server Actions (mutations)
-│   │   ├── supabase/         # server.ts, client.ts, database.types.ts
-│   │   ├── repositories/     # mediaRepository.ts
-│   │   ├── services/         # mediaService.ts
+│   │   ├── actions/          # Server Actions (mutations, OCR, imports)
+│   │   ├── repositories/     # Database access (mediaRepository.ts)
+│   │   ├── services/         # Business logic (mediaService.ts)
+│   │   ├── supabase/         # Supabase clients & types
 │   │   └── utils/            # formatters.ts
-│   └── middleware.ts          # Auth + email whitelist enforcement
-├── data_pipeline/
-│   ├── ingestion/            # goodreads_parser.py, ocr_extractor.py
-│   ├── enrichment/           # tmdb_client.py, google_books_client.py
-│   ├── storage/              # supabase_repo.py
-│   └── main.py               # CLI orchestrator
+│   └── proxy.ts              # Auth + email whitelist enforcement
 ├── supabase/migrations/      # SQL schema
-├── docker/                   # Dockerfiles
-└── docker-compose.yml
+└── docs/                     # Generated TypeDoc site
 ```
+
+---
+
+## 📚 Documentation
+
+The entire codebase is strictly documented using JSDoc (with `@file` headers on every file). You can generate a beautiful static HTML site to browse the architecture:
+
+```bash
+npm run docs          # Generates docs in the /docs folder
+```
+*Open `docs/index.html` in your browser to view the interactive codebase documentation.*
 
 ---
 
@@ -307,3 +201,35 @@ npm run format:check  # Prettier (CI check)
 ## 📄 License
 
 MIT — feel free to fork and build your own vault 🌙
+
+## 🗃️ Database Migrations
+
+This project uses Supabase migrations for schema versioning. The migrations are executed sequentially:
+
+### 001_initial_schema.sql
+Initial Database Schema. Configures the base media_items table, custom enums (media_type, media_status), UUID generation, Row Level Security (RLS) policies, and timestamp update triggers.
+
+### 002_add_progress_tracking.sql
+Adds progress tracking columns to media_items. Specifically adds is_favorite, pages_read, total_pages, episodes_seen, and reading_time_minutes to support fine-grained progress logging.
+
+### 003_add_season_progress.sql
+Adds season-level tracking for TV series. Adds the seasons_seen integer column to track how many complete seasons a user has finished.
+
+### 004_add_last_synced_at.sql
+Adds the last_synced_at timestamp column. This tracks when a media item (usually an ongoing TV series) was last updated from external APIs (like TMDB).
+
+### 005_add_series_status.sql
+Adds the series_status string column. Used to track whether a TV series is Returning Series, Ended, or Canceled from TMDB.
+
+### 006_add_reading_journal.sql
+Adds the reading_journal JSONB column. Stores an array of journal entries (dates and notes) for logging daily thoughts while reading a book.
+
+### 007_add_tags_and_sort_order.sql
+Adds custom categorization and ordering. Introduces the tags text array for custom labeling, and sort_order integer for manual drag-and-drop ordering.
+
+### 008_add_recipes.sql
+Expands the vault to support Recipes. Updates the media_type enum to include recipe, adds cooking statuses to media_status, and adds ingredients and instructions JSONB arrays.
+
+### 009_add_performance_indexes.sql
+Database Optimization. Creates B-Tree and GIN indexes on frequently queried columns (user_id, type, status) to optimize read performance for large vaults.
+

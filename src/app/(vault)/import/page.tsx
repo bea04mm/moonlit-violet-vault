@@ -1,3 +1,8 @@
+/**
+ * Import page for adding bulk media via Goodreads CSV or AI Book Spine Scanner.
+ * 
+ * @packageDocumentation
+ */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,11 +15,18 @@ import FileUploadIcon from "@mui/icons-material/FileUpload";
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
+/**
+ * Renders the Import page, providing drag-and-drop zones and file upload inputs for 
+ * AI image spine scanning and Goodreads CSV imports.
+ */
 export default function ImportPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    /**
+     * Prevents the user from accidentally leaving the page while an upload or import process is ongoing.
+     */
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isUploading) {
         e.preventDefault();
@@ -31,10 +43,16 @@ export default function ImportPage() {
   const [isDraggingImage, setIsDraggingImage] = useState(false);
   const [isDraggingCSV, setIsDraggingCSV] = useState(false);
 
+  /**
+   * Reads an uploaded image file, converts it to base64, and triggers the AI extraction process.
+   */
   const processImage = async (file: File) => {
     setIsExtracting(true);
     setExtractedTitles([]);
 
+    /**
+     * FileReader instance used to convert the selected image into a Data URL.
+     */
     const reader = new FileReader();
     reader.onload = async () => {
       try {
@@ -55,9 +73,9 @@ export default function ImportPage() {
         
         if (res.success && res.titles) {
           // Initialize list with pending status
-          const items = res.titles.map((t: any) => ({ 
+          const items = res.titles.map((t) => ({ 
             ...t,
-            title: t.title || t, 
+            title: t.title || "", 
             type: t.type || "movie", 
             status: "pending" 
           }));
@@ -77,7 +95,7 @@ export default function ImportPage() {
               } else {
                 setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "failed" } : p));
               }
-            } catch (err) {
+            } catch {
               setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "failed" } : p));
             }
           }
@@ -85,8 +103,9 @@ export default function ImportPage() {
         } else {
           toast.error(res.error || "Failed to extract titles");
         }
-      } catch (err: any) {
-        toast.error("Server error: " + (err.message || "Unknown error"));
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : "Unknown error";
+        toast.error("Server error: " + errorMsg);
       } finally {
         setIsExtracting(false);
       }
@@ -98,11 +117,20 @@ export default function ImportPage() {
     reader.readAsDataURL(file);
   };
 
+  /**
+   * Handles the file input change event for image uploads.
+   */
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    /**
+     * Declaration for file.
+     */
     const file = e.target.files?.[0];
     if (file) processImage(file);
   };
 
+  /**
+   * Parses and processes an uploaded Goodreads CSV file, importing valid books in batches.
+   */
   const processCSV = (file: File) => {
     setIsUploading(true);
     setProgress(0);
@@ -111,13 +139,13 @@ export default function ImportPage() {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const rows = results.data as any[];
+        const rows = results.data as Record<string, string>[];
         
         const items = rows.map((row) => {
           const rawRating = parseFloat(row["My Rating"] || "0");
-          const userRating = rawRating > 0 ? rawRating * 2 : null;
+          const userRating = rawRating > 0 ? rawRating * 2 : undefined;
           const yearRaw = parseInt(row["Original Publication Year"] || "0", 10);
-          const releaseYear = yearRaw > 0 ? yearRaw : null;
+          const releaseYear = yearRaw > 0 ? yearRaw : undefined;
           
           let status: "read" | "reading" | "want_to_read" = "want_to_read";
           const shelf = row["Exclusive Shelf"] || "";
@@ -125,24 +153,24 @@ export default function ImportPage() {
           if (shelf === "currently-reading") status = "reading";
           
           const isbnRaw = String(row["ISBN13"] || row["ISBN"] || "").replace(/[^0-9X]/g, "");
-          const isbn = isbnRaw.length > 0 ? isbnRaw : null;
+          const isbn = isbnRaw.length > 0 ? isbnRaw : undefined;
 
           const totalPagesRaw = parseInt(row["Number of Pages"] || "0", 10);
-          const totalPages = totalPagesRaw > 0 ? totalPagesRaw : null;
+          const totalPages = totalPagesRaw > 0 ? totalPagesRaw : undefined;
           const pagesRead = status === "read" && totalPages ? totalPages : 0;
 
           return {
             type: "book" as const,
             title: row["Title"]?.trim(),
-            author: row["Author"]?.trim() || null,
+            author: row["Author"]?.trim() || undefined,
             isbn,
             status,
             user_rating: userRating,
             release_year: releaseYear,
             total_pages: totalPages,
             pages_read: pagesRead,
-            date_completed: row["Date Read"] || null,
-            date_added: row["Date Added"] || null,
+            date_completed: row["Date Read"] || undefined,
+            date_added: row["Date Added"] || undefined,
             ingestion_source: "goodreads_csv" as const,
           };
         }).filter(item => item.title);
@@ -172,40 +200,64 @@ export default function ImportPage() {
     });
   };
 
+  /**
+   * Declaration for handleFileUpload.
+   */
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    /**
+     * Declaration for file.
+     */
     const file = e.target.files?.[0];
     if (file) processCSV(file);
   };
 
+  /**
+   * Declaration for handleDragOver.
+   */
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
   };
 
+  /**
+   * Declaration for handleDragEnterImage.
+   */
   const handleDragEnterImage = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingImage(true);
   };
 
+  /**
+   * Declaration for handleDragLeaveImage.
+   */
   const handleDragLeaveImage = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingImage(false);
   };
 
+  /**
+   * Declaration for handleDragEnterCSV.
+   */
   const handleDragEnterCSV = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingCSV(true);
   };
 
+  /**
+   * Declaration for handleDragLeaveCSV.
+   */
   const handleDragLeaveCSV = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingCSV(false);
   };
 
+  /**
+   * Declaration for handleImageDrop.
+   */
   const handleImageDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -213,6 +265,9 @@ export default function ImportPage() {
     
     if (isExtracting) return;
     
+    /**
+     * Declaration for file.
+     */
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
       processImage(file);
@@ -221,6 +276,9 @@ export default function ImportPage() {
     }
   };
 
+  /**
+   * Declaration for handleCSVDrop.
+   */
   const handleCSVDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -228,6 +286,9 @@ export default function ImportPage() {
     
     if (isUploading) return;
 
+    /**
+     * Declaration for file.
+     */
     const file = e.dataTransfer.files?.[0];
     if (file && (file.type === "text/csv" || file.name.endsWith(".csv"))) {
       processCSV(file);
@@ -256,10 +317,10 @@ export default function ImportPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
         {/* Screenshot OCR */}
         <div 
-          className={`relative overflow-hidden glass-card p-8 lg:p-12 rounded-3xl border-2 flex flex-col items-center justify-center gap-4 text-center transition-all duration-300 ease-out bg-[var(--color-lunar-950)]/50
+          className={`relative overflow-hidden glass-card p-8 lg:p-12 rounded-3xl border-2 flex flex-col items-center justify-center gap-4 text-center transition-all duration-300 ease-out bg-(--color-lunar-950)/50
             ${isDraggingImage 
-              ? "border-solid border-[var(--color-violet-400)] shadow-[0_0_40px_rgba(167,139,250,0.3)] bg-[var(--color-violet-900)]/20 scale-[1.03] -translate-y-2 z-10 [&>*]:pointer-events-none" 
-              : "border-dashed border-[var(--color-lunar-800)] hover:border-[var(--color-violet-500)] hover:bg-[var(--color-lunar-900)]/40"
+              ? "border-solid border-violet-400 shadow-[0_0_40px_rgba(167,139,250,0.3)] bg-violet-900/20 scale-[1.03] -translate-y-2 z-10 *:pointer-events-none" 
+              : "border-dashed border-lunar-800 hover:border-(--color-violet-500) hover:bg-(--color-lunar-900)/40"
             }`}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnterImage}
@@ -267,13 +328,13 @@ export default function ImportPage() {
           onDrop={handleImageDrop}
         >
           {isDraggingImage && (
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-violet-500)]/10 to-transparent animate-pulse pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-t from-(--color-violet-500)/10 to-transparent animate-pulse pointer-events-none" />
           )}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-[var(--color-violet-400)] mb-2 transition-all duration-300 ${isDraggingImage ? "bg-[var(--color-violet-500)]/30 scale-125" : "bg-[var(--color-violet-500)]/10"}`}>
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-violet-400 mb-2 transition-all duration-300 ${isDraggingImage ? "bg-(--color-violet-500)/30 scale-125" : "bg-(--color-violet-500)/10"}`}>
             <PhotoCameraIcon sx={{ fontSize: 32 }} />
           </div>
-          <h2 className={`text-xl font-bold transition-colors ${isDraggingImage ? "text-[var(--color-violet-300)]" : "text-[var(--color-lunar-50)]"}`}>Magic AI Scanner</h2>
-          <p className="text-sm text-[var(--color-lunar-400)] max-w-sm">
+          <h2 className={`text-xl font-bold transition-colors ${isDraggingImage ? "text-violet-300" : "text-lunar-50"}`}>Magic AI Scanner</h2>
+          <p className="text-sm text-lunar-400 max-w-sm">
             Drop a screenshot of a movie list, or a photo of a recipe book. AI will extract and save it automatically.
           </p>
           
@@ -324,29 +385,29 @@ export default function ImportPage() {
           
           {extractedTitles.length > 0 && (
             <div className="w-full max-w-xs mt-4 text-left">
-              <p className="text-xs text-[var(--color-violet-400)] font-bold uppercase mb-2">Ingesting Titles</p>
-              <ul className="text-sm text-white bg-[var(--color-lunar-900)] p-3 rounded-xl border border-[var(--color-lunar-800)] max-h-32 overflow-y-auto">
+              <p className="text-xs text-violet-400 font-bold uppercase mb-2">Ingesting Titles</p>
+              <ul className="text-sm text-white bg-(--color-lunar-900) p-3 rounded-xl border border-lunar-800 max-h-32 overflow-y-auto">
                 {extractedTitles.map((t, i) => (
-                  <li key={i} className="mb-2 last:mb-0 border-b border-[var(--color-lunar-800)] last:border-0 pb-2 last:pb-0 flex items-center justify-between">
+                  <li key={i} className="mb-2 last:mb-0 border-b border-lunar-800 last:border-0 pb-2 last:pb-0 flex items-center justify-between">
                     <span className="truncate pr-2">{t.title}</span>
-                    {t.status === "pending" && <span className="text-[var(--color-lunar-500)] text-xs">Waiting...</span>}
-                    {t.status === "loading" && <span className="text-[var(--color-violet-400)] text-xs animate-pulse">Searching...</span>}
+                    {t.status === "pending" && <span className="text-lunar-500 text-xs">Waiting...</span>}
+                    {t.status === "loading" && <span className="text-violet-400 text-xs animate-pulse">Searching...</span>}
                     {t.status === "success" && <span className="text-green-400 text-xs font-bold">Added</span>}
                     {t.status === "failed" && <span className="text-red-400 text-xs font-bold">Failed</span>}
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-[var(--color-lunar-500)] mt-2 italic text-center">Items are automatically searched and saved to your vault.</p>
+              <p className="text-xs text-lunar-500 mt-2 italic text-center">Items are automatically searched and saved to the vault.</p>
             </div>
           )}
         </div>
 
         {/* Goodreads CSV */}
         <div 
-          className={`relative overflow-hidden glass-card p-8 lg:p-12 rounded-3xl border-2 flex flex-col items-center justify-center gap-4 text-center transition-all duration-300 ease-out bg-[var(--color-lunar-950)]/50
+          className={`relative overflow-hidden glass-card p-8 lg:p-12 rounded-3xl border-2 flex flex-col items-center justify-center gap-4 text-center transition-all duration-300 ease-out bg-(--color-lunar-950)/50
             ${isDraggingCSV 
-              ? "border-solid border-[var(--color-blossom-400)] shadow-[0_0_40px_rgba(240,78,150,0.3)] bg-[var(--color-blossom-900)]/20 scale-[1.03] -translate-y-2 z-10 [&>*]:pointer-events-none" 
-              : "border-dashed border-[var(--color-lunar-800)] hover:border-[var(--color-blossom-500)] hover:bg-[var(--color-lunar-900)]/40"
+              ? "border-solid border-blossom-400 shadow-[0_0_40px_rgba(240,78,150,0.3)] bg-(--color-blossom-900)/20 scale-[1.03] -translate-y-2 z-10 *:pointer-events-none" 
+              : "border-dashed border-lunar-800 hover:border-blossom-500 hover:bg-(--color-lunar-900)/40"
             }`}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnterCSV}
@@ -354,14 +415,14 @@ export default function ImportPage() {
           onDrop={handleCSVDrop}
         >
           {isDraggingCSV && (
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-blossom-500)]/10 to-transparent animate-pulse pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-t from-blossom-500/10 to-transparent animate-pulse pointer-events-none" />
           )}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-[var(--color-blossom-400)] mb-2 transition-all duration-300 ${isDraggingCSV ? "bg-[var(--color-blossom-500)]/30 scale-125" : "bg-[var(--color-blossom-500)]/10"}`}>
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-blossom-400 mb-2 transition-all duration-300 ${isDraggingCSV ? "bg-blossom-500/30 scale-125" : "bg-blossom-500/10"}`}>
             <FileUploadIcon sx={{ fontSize: 32 }} />
           </div>
-          <h2 className={`text-xl font-bold transition-colors ${isDraggingCSV ? "text-[var(--color-blossom-300)]" : "text-[var(--color-lunar-50)]"}`}>Goodreads CSV</h2>
-          <p className="text-sm text-[var(--color-lunar-400)] max-w-sm">
-            Export the library from Goodreads and upload the CSV here to automatically sync your vault.
+          <h2 className={`text-xl font-bold transition-colors ${isDraggingCSV ? "text-blossom-300" : "text-lunar-50"}`}>Goodreads CSV</h2>
+          <p className="text-sm text-lunar-400 max-w-sm">
+            Export the library from Goodreads and upload the CSV here to automatically sync the vault.
           </p>
           
           <div className="mt-4">
@@ -383,13 +444,13 @@ export default function ImportPage() {
           
           {isUploading && (
             <div className="w-full max-w-xs mt-4 flex flex-col items-center gap-2">
-              <div className="w-full h-1.5 bg-[var(--color-lunar-900)] rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-(--color-lunar-900) rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-[var(--color-blossom-500)] transition-all duration-300" 
+                  className="h-full bg-blossom-500 transition-all duration-300" 
                   style={{ width: `${progress}%` }} 
                 />
               </div>
-              <p className="text-xs text-[var(--color-blossom-400)] flex items-center gap-1 mt-2 font-semibold">
+              <p className="text-xs text-blossom-400 flex items-center gap-1 mt-2 font-semibold">
                 <WarningAmberIcon sx={{ fontSize: 14 }} /> Please keep this page open until finished.
               </p>
             </div>

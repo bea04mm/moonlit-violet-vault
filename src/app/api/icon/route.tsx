@@ -1,11 +1,30 @@
+/**
+ * Dynamic app icon generator using next/og (Open Graph).
+ * 
+ * @packageDocumentation
+ */
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
+/**
+ * Set the edge runtime environment for optimized performance and faster generation.
+ */
 export const runtime = 'edge';
 
+/**
+ * Handles GET requests to generate the application icon dynamically.
+ * Returns a PNG image containing a stylised moon (from NightlightIcon).
+ * @param request The incoming request.
+ */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+  /**
+   * The requested size dimension (width and height) extracted from the query string parameters.
+   */
   const sizeParam = searchParams.get('size');
+  /**
+   * Parsed integer size for the icon to generate, defaulting to 512 pixels if not specified.
+   */
   const size = sizeParam ? parseInt(sizeParam) : 512;
 
   // Render the Moon icon with a dark background to match the theme

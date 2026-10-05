@@ -1,11 +1,17 @@
-// src/app/(vault)/page.tsx
-// Dashboard — the home page of the vault. Fetches stats and recent items server-side.
-
+/**
+ * Main dashboard — the first page seen after login.
+ * Displays: stat cards (totals per type, currently watching/reading), a FavoritesCarousel,
+ * and a "Recently Added" grid. All sections are wrapped in Suspense with skeleton fallbacks
+ * so the page is fast to render even while data is loading.
+ * Uses `force-dynamic` to always fetch fresh data from Supabase on each request.
+ * 
+ * @packageDocumentation
+ */
+export const dynamic = 'force-dynamic';
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getVaultStats, getRecentlyAdded, getFavorites } from "@/lib/services/mediaService";
 import { MediaGrid } from "@/components/media/MediaGrid";
-import { MediaCard } from "@/components/media/MediaCard";
 import { MediaCardSkeleton } from "@/components/ui/Skeleton";
 import MovieIcon from "@mui/icons-material/Movie";
 import TvIcon from "@mui/icons-material/Tv";
@@ -15,11 +21,17 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import { FavoritesCarousel } from "@/components/media/FavoritesCarousel";
 
+/**
+ * Metadata configuration for the main dashboard page.
+ */
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Personal media sanctuary overview.",
 };
 
+/**
+ * Reusable component to render a statistic card with an icon, label, and value.
+ */
 async function StatCard({
   icon,
   label,
@@ -36,7 +48,7 @@ async function StatCard({
       className="glass-card rounded-3xl p-6 flex flex-col gap-2"
       style={{ boxShadow: "var(--shadow-card)" }}
     >
-      <span className="text-3xl flex items-center justify-center w-12 h-12 rounded-xl bg-[color-mix(in_srgb,var(--color-violet-500)_15%,transparent)] text-[var(--color-violet-400)]" aria-hidden="true">
+      <span className="text-3xl flex items-center justify-center w-12 h-12 rounded-xl bg-[color-mix(in_srgb,var(--color-violet-500)_15%,transparent)] text-violet-400" aria-hidden="true">
         {icon}
       </span>
       <div>
@@ -65,7 +77,13 @@ async function StatCard({
   );
 }
 
+/**
+ * Dashboard — the home page of the vault. Fetches stats and recent items server-side.
+ */
 async function DashboardStats() {
+  /**
+   * Vault statistics fetched from the media service.
+   */
   const stats = await getVaultStats();
 
   return (
@@ -103,8 +121,14 @@ async function DashboardStats() {
   );
 }
 
+/**
+ * Server component that fetches and renders the most recently added items to the vault.
+ */
 async function RecentItems() {
-  const items = await getRecentlyAdded(6);
+  /**
+   * The list of recently added media items.
+   */
+  const items = await getRecentlyAdded(3);
   return (
     <MediaGrid
       items={items}
@@ -113,12 +137,18 @@ async function RecentItems() {
   );
 }
 
+/**
+ * Server component that fetches and renders the user's favorite items in a carousel.
+ */
 async function FavoriteItems() {
+  /**
+   * The list of media items marked as favorites by the user.
+   */
   const items = await getFavorites();
   if (items.length === 0) {
     return (
-      <div className="p-8 text-center text-[var(--color-lunar-500)] bg-[var(--color-lunar-900)] rounded-3xl border border-[var(--color-lunar-800)] text-sm">
-        No favorites yet. Click the heart on your favorite movies or books!
+      <div className="p-8 text-center text-lunar-500 bg-(--color-lunar-900) rounded-3xl border border-lunar-800 text-sm">
+        No favorites yet. Click the heart on favorite movies or books!
       </div>
     );
   }
@@ -127,6 +157,9 @@ async function FavoriteItems() {
   );
 }
 
+/**
+ * Renders the main Dashboard page, combining stats, favorites, and recent items inside Suspense boundaries.
+ */
 export default function DashboardPage() {
   return (
     <div className="space-y-10 animate-fade-in">
@@ -142,7 +175,7 @@ export default function DashboardPage() {
           </h1>
         </div>
         <p className="text-sm" style={{ color: "var(--color-lunar-500)" }}>
-          All movies, series, and books — beautifully organised.
+          All movies, series, books, and recipes — beautifully organised.
         </p>
       </div>
 
@@ -173,7 +206,7 @@ export default function DashboardPage() {
       </section>
 
       {/* Favorites */}
-      <section aria-labelledby="favorites-heading" className="mb-7">
+      <section aria-labelledby="favorites-heading" className="mb-4">
         <h2
           id="favorites-heading"
           className="text-xs font-semibold uppercase tracking-widest mb-4"
@@ -185,7 +218,7 @@ export default function DashboardPage() {
           fallback={
             <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
               {[...Array(3)].map((_, i) => (
-                <div key={`skel-${i}`} className="w-[85vw] sm:w-[350px] md:w-[400px] shrink-0">
+                <div key={`skel-${i}`} className="w-[85vw] sm:w-87.5 md:w-100 shrink-0">
                   <MediaCardSkeleton />
                 </div>
               ))}
@@ -220,3 +253,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
