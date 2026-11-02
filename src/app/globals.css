@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
+
 /* ============================================================
    MOONLIT VIOLET VAULT — Design System
-   Tailwind v4 CSS-first theme configuration
+   Linear / Raycast Dark Craft & Warm Paper Craft Light
    ============================================================ */
 
 @theme {
@@ -10,9 +12,10 @@
   --font-sans: var(--font-geist-sans), "Inter", system-ui, sans-serif;
   --font-display: var(--font-bricolage), "Bricolage Grotesque", sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
+  --font-handwriting: var(--font-handwriting), "Caveat", cursive;
 
   /* --- Violet / Lilac Spectrum (Primary) --- */
-  --color-violet-50:  #f5f0ff;
+  --color-violet-50: #f5f0ff;
   --color-violet-100: #ede0ff;
   --color-violet-200: #dbbfff;
   --color-violet-300: #c89aff;
@@ -24,8 +27,22 @@
   --color-violet-900: #430e8c;
   --color-violet-950: #2a0660;
 
+  /* --- Purple Spectrum (Aliased to Vault Violet/Purple Palette) --- */
+  --color-purple-50: #f5f0ff;
+  --color-purple-100: #ede0ff;
+  --color-purple-200: #dbbfff;
+  --color-purple-300: #c89aff;
+  --color-purple-400: #b470ff;
+  --color-purple-500: #9d4dff;
+  --color-purple-600: #8230f0;
+  --color-purple-700: #6b19d4;
+  --color-purple-800: #5713b0;
+  --color-purple-900: #430e8c;
+  --color-purple-950: #2a0660;
+  --color-purple: var(--color-primary);
+
   /* --- Lunar / Night Tones (Secondary) --- */
-  --color-lunar-50:  #f8f6ff;
+  --color-lunar-50: #f8f6ff;
   --color-lunar-100: #f0ecff;
   --color-lunar-200: #e2d9ff;
   --color-lunar-300: #c8bcf5;
@@ -34,8 +51,8 @@
   --color-lunar-600: #5e5190;
   --color-lunar-700: #463b70;
   --color-lunar-800: #302850;
-  --color-lunar-900: #1e1833;
-  --color-lunar-950: #110e1f;
+  --color-lunar-900: #13111c;
+  --color-lunar-950: #0a0910;
 
   /* --- Blossom / Rose Accents --- */
   --color-blossom-100: #ffe4f0;
@@ -45,62 +62,303 @@
   --color-blossom-500: #f04e96;
 
   /* --- Starlight / Gold Accents --- */
-  --color-starlight-200: #fff3cc;
+  --color-starlight-200: #fef3c7;
   --color-starlight-400: #ffd966;
   --color-starlight-500: #ffcc33;
-  --color-starlight-600: #e6b800;
+  --color-starlight-600: #d97706;
 
   /* --- Semantic Color Aliases --- */
-  --color-background: var(--color-lunar-950);
-  --color-surface:    var(--color-lunar-900);
-  --color-border:     color-mix(in srgb, var(--color-violet-500) 20%, transparent);
-  --color-primary:    var(--color-violet-500);
+  --color-background: var(--theme-background, #0a0910);
+  --color-surface: var(--theme-surface, #13111c);
+  --color-surface-hover: var(--theme-surface-hover, #1a1726);
+  --color-surface-elevated: var(--theme-surface-elevated, #181524);
+  --color-border: var(--theme-border, rgba(180, 112, 255, 0.18));
+  --color-border-subtle: var(--theme-border-subtle, rgba(180, 112, 255, 0.1));
+  --color-border-hover: var(--theme-border-hover, rgba(180, 112, 255, 0.5));
+  --color-primary: var(--theme-primary, #b470ff);
   --color-primary-fg: #ffffff;
+  --color-primary-hover: var(--theme-primary-hover, #c89aff);
+  --color-foreground: var(--theme-foreground, #ede0ff);
+  --color-muted: var(--theme-muted, #dbbfff);
+  --color-accent: var(--theme-accent, #d8b4fe);
+  --color-accent-foreground: var(--theme-accent-fg, #0a0910);
+  --color-secondary: var(--theme-secondary, #34d399);
+
+  /* --- Distribution Chart Theme Aliases --- */
+  --color-chart-violet-primary: var(--chart-violet-primary);
+  --color-chart-violet-vibrant: var(--chart-violet-vibrant);
+  --color-chart-violet-soft: var(--chart-violet-soft);
+  --color-chart-celestial-indigo: var(--chart-celestial-indigo);
+  --color-chart-rose-blossom: var(--chart-rose-blossom);
+  --color-chart-lunar-slate: var(--chart-lunar-slate);
 
   /* --- Border Radius --- */
-  --radius-xl:  0.75rem;
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
-  --radius-4xl: 2rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 0.875rem;
+  --radius-4xl: 1rem;
 
   /* --- Custom Box Shadows --- */
-  --shadow-card:       0 4px 24px 0 color-mix(in srgb, var(--color-violet-500) 8%, transparent);
-  --shadow-card-hover: 0 8px 40px 0 color-mix(in srgb, var(--color-violet-500) 18%, transparent);
-  --shadow-glow-sm:    0 0 12px color-mix(in srgb, var(--color-violet-500) 35%, transparent);
-  --shadow-glow-md:    0 0 24px color-mix(in srgb, var(--color-violet-500) 45%, transparent);
-  --shadow-glow-lg:    0 0 48px color-mix(in srgb, var(--color-violet-500) 55%, transparent);
+  --shadow-card: var(--theme-shadow-card);
+  --shadow-card-hover: var(--theme-shadow-card-hover);
+  --shadow-glow-sm: 0 0 0 1px var(--theme-glow-sm);
+  --shadow-glow-md: 0 2px 10px 0 var(--theme-glow-md);
+  --shadow-glow-lg: 0 4px 20px 0 var(--theme-glow-lg);
 
   /* --- Animations --- */
-  --animate-float:      float 6s ease-in-out infinite;
-  --animate-shimmer:    shimmer 2s linear infinite;
-  --animate-fade-in:    fadeIn 0.7s ease-out;
-  --animate-slide-up:   slideUp 0.3s ease-out;
-  --animate-glow-pulse: glowPulse 3s ease-in-out infinite;
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50%       { transform: translateY(-8px); }
-  }
-
-  @keyframes shimmer {
-    0%   { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
+  --animate-fade-in: fadeIn 0.25s ease-out;
+  --animate-slide-up: slideUp 0.2s ease-out;
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes slideUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
+}
 
-  @keyframes glowPulse {
-    0%, 100% { box-shadow: 0 0 12px color-mix(in srgb, var(--color-violet-500) 35%, transparent); }
-    50%       { box-shadow: 0 0 28px color-mix(in srgb, var(--color-violet-500) 65%, transparent); }
-  }
+/* ============================================================
+   THEME TOKENS (DARK & LIGHT)
+   ============================================================ */
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Moonlit Violet Vault Dark Theme */
+  --theme-background: #0a0910;
+  --theme-surface: #13111c;
+  --theme-surface-hover: #1a1726;
+  --theme-surface-elevated: #181524;
+  --theme-border: rgba(180, 112, 255, 0.25);
+  --theme-border-subtle: rgba(180, 112, 255, 0.14);
+  --theme-border-hover: rgba(180, 112, 255, 0.5);
+  --theme-primary: #b470ff;
+  --theme-primary-fg: #ffffff;
+  --theme-primary-hover: #c89aff;
+  --theme-foreground: #ede0ff;
+  --theme-muted: #dbbfff;
+  --theme-accent: #d8b4fe;
+  --theme-accent-fg: #0a0910;
+  --theme-secondary: #34d399;
+  --theme-title-gradient: linear-gradient(135deg, #ede0ff 0%, #c89aff 50%, #b470ff 100%);
+
+  /* Direct CSS variables for explicit style bindings */
+  --color-background: #0a0910;
+  --color-surface: #13111c;
+  --color-surface-hover: #1a1726;
+  --color-surface-elevated: #181524;
+  --color-border: rgba(180, 112, 255, 0.25);
+  --color-border-subtle: rgba(180, 112, 255, 0.14);
+  --color-border-hover: rgba(180, 112, 255, 0.5);
+  --color-primary: #b470ff;
+  --color-primary-fg: #ffffff;
+  --color-primary-hover: #c89aff;
+  --color-foreground: #ede0ff;
+  --color-muted: #dbbfff;
+  --color-accent: #d8b4fe;
+  --color-accent-foreground: #0a0910;
+  --color-secondary: #34d399;
+
+  /* --- Distribution Chart Theme Colors (Paper Craft Soft Dark) --- */
+  --chart-violet-primary: #9d4dff;
+  --chart-violet-vibrant: #c89aff;
+  --chart-violet-soft: #dbbfff;
+  --chart-celestial-indigo: #818cf8;
+  --chart-rose-blossom: #f472b6;
+  --chart-lunar-slate: #7a6bb5;
+
+  /* --- Media Type & Library Distribution Colors (Paper Craft Soft Dark) --- */
+  --type-movie: #c084fc;
+  --type-series: #a5b4fc;
+  --type-book: #5eead4;
+  --type-recipe: #fde047;
+
+  /* --- Status Badges & Status Overview Colors (Paper Craft Soft Dark) --- */
+  --status-completed: #6ee7b7;
+  --status-in-progress: #f9a8d4;
+  --status-plan: #7dd3fc;
+  --status-on-hold: #c084fc;
+  --status-dropped: #fda4af;
+
+  --badge-movie-bg: rgba(192, 132, 252, 0.2);
+  --badge-movie-text: #c084fc;
+  --badge-movie-border: rgba(192, 132, 252, 0.35);
+
+  --badge-series-bg: rgba(165, 180, 252, 0.2);
+  --badge-series-text: #a5b4fc;
+  --badge-series-border: rgba(165, 180, 252, 0.35);
+
+  --badge-book-bg: rgba(94, 234, 212, 0.2);
+  --badge-book-text: #5eead4;
+  --badge-book-border: rgba(94, 234, 212, 0.35);
+
+  --badge-recipe-bg: rgba(253, 224, 71, 0.2);
+  --badge-recipe-text: #fde047;
+  --badge-recipe-border: rgba(253, 224, 71, 0.35);
+
+  --badge-completed-bg: rgba(110, 231, 183, 0.2);
+  --badge-completed-text: #6ee7b7;
+  --badge-completed-border: rgba(110, 231, 183, 0.35);
+
+  --badge-in-progress-bg: rgba(249, 168, 212, 0.2);
+  --badge-in-progress-text: #f9a8d4;
+  --badge-in-progress-border: rgba(249, 168, 212, 0.35);
+
+  --badge-plan-bg: rgba(125, 211, 252, 0.2);
+  --badge-plan-text: #7dd3fc;
+  --badge-plan-border: rgba(125, 211, 252, 0.35);
+
+  --badge-on-hold-bg: rgba(192, 132, 252, 0.2);
+  --badge-on-hold-text: #c084fc;
+  --badge-on-hold-border: rgba(192, 132, 252, 0.4);
+
+  --badge-dropped-bg: rgba(253, 164, 175, 0.2);
+  --badge-dropped-text: #fda4af;
+  --badge-dropped-border: rgba(253, 164, 175, 0.35);
+
+  --theme-shadow-card: 0 4px 24px 0 rgba(0, 0, 0, 0.75);
+  --theme-shadow-card-hover: 0 8px 30px 0 rgba(0, 0, 0, 0.8), 0 0 14px 0 rgba(180, 112, 255, 0.16);
+  --theme-glow-sm: rgba(180, 112, 255, 0.45);
+  --theme-glow-md: rgba(180, 112, 255, 0.55);
+  --theme-glow-lg: rgba(180, 112, 255, 0.65);
+
+  --body-bg-gradient: radial-gradient(
+    ellipse 80% 40% at 50% 0%,
+    rgba(180, 112, 255, 0.05) 0%,
+    transparent 80%
+  );
+  --scrollbar-thumb: rgba(180, 112, 255, 0.4);
+  --scrollbar-track: #0a0910;
+  --selection-bg: rgba(157, 77, 255, 0.35);
+  --selection-color: #ffffff;
+}
+
+[data-theme="light"],
+.light {
+  color-scheme: light;
+
+  /* Warm Paper Craft Light Theme */
+  --theme-background: #f3f0f7;
+  --theme-surface: #ffffff;
+  --theme-surface-hover: #faf7fd;
+  --theme-surface-elevated: #ebe5f5;
+  --theme-border: #d8cee8;
+  --theme-border-subtle: #e8e1f2;
+  --theme-border-hover: rgba(126, 34, 206, 0.4);
+  --theme-primary: #7e22ce;
+  --theme-primary-fg: #ffffff;
+  --theme-primary-hover: #6b21a8;
+  --theme-foreground: #1e1338;
+  --theme-muted: #584975;
+  --theme-accent: #6b21a8;
+  --theme-accent-fg: #ffffff;
+  --theme-secondary: #059669;
+  --theme-title-gradient: linear-gradient(135deg, #1e1338 0%, #4c1d95 60%, #7e22ce 100%);
+
+  /* Direct CSS variables for explicit style bindings */
+  --color-background: #f3f0f7;
+  --color-surface: #ffffff;
+  --color-surface-hover: #faf7fd;
+  --color-surface-elevated: #ebe5f5;
+  --color-border: #d8cee8;
+  --color-border-subtle: #e8e1f2;
+  --color-border-hover: rgba(126, 34, 206, 0.4);
+  --color-primary: #7e22ce;
+  --color-primary-fg: #ffffff;
+  --color-primary-hover: #6b21a8;
+  --color-foreground: #1e1338;
+  --color-muted: #584975;
+  --color-accent: #6b21a8;
+  --color-accent-foreground: #ffffff;
+  --color-secondary: #059669;
+
+  /* --- Distribution Chart Theme Colors (Paper Craft Soft Light) --- */
+  --chart-violet-primary: #7c3aed;
+  --chart-violet-vibrant: #8b5cf6;
+  --chart-violet-soft: #a78bfa;
+  --chart-celestial-indigo: #6366f1;
+  --chart-rose-blossom: #db2777;
+  --chart-lunar-slate: #8b5cf6;
+
+  /* --- Media Type & Library Distribution Colors (Paper Craft Soft Light) --- */
+  --type-movie: #9333ea;
+  --type-series: #4f46e5;
+  --type-book: #0d9488;
+  --type-recipe: #ca8a04;
+
+  /* --- Status Badges & Status Overview Colors (Paper Craft Soft Light) --- */
+  --status-completed: #059669;
+  --status-in-progress: #db2777;
+  --status-plan: #0284c7;
+  --status-on-hold: #6b21a8;
+  --status-dropped: #e11d48;
+
+  --badge-movie-bg: rgba(147, 51, 234, 0.12);
+  --badge-movie-text: #581c87;
+  --badge-movie-border: rgba(147, 51, 234, 0.3);
+
+  --badge-series-bg: rgba(79, 70, 229, 0.12);
+  --badge-series-text: #3730a3;
+  --badge-series-border: rgba(79, 70, 229, 0.3);
+
+  --badge-book-bg: rgba(13, 148, 136, 0.12);
+  --badge-book-text: #115e59;
+  --badge-book-border: rgba(13, 148, 136, 0.3);
+
+  --badge-recipe-bg: rgba(202, 138, 4, 0.12);
+  --badge-recipe-text: #854d0e;
+  --badge-recipe-border: rgba(202, 138, 4, 0.3);
+
+  --badge-completed-bg: rgba(5, 150, 105, 0.12);
+  --badge-completed-text: #065f46;
+  --badge-completed-border: rgba(5, 150, 105, 0.3);
+
+  --badge-in-progress-bg: rgba(219, 39, 119, 0.12);
+  --badge-in-progress-text: #9d174d;
+  --badge-in-progress-border: rgba(219, 39, 119, 0.3);
+
+  --badge-plan-bg: rgba(2, 132, 199, 0.12);
+  --badge-plan-text: #075985;
+  --badge-plan-border: rgba(2, 132, 199, 0.3);
+
+  --badge-on-hold-bg: rgba(107, 33, 168, 0.12);
+  --badge-on-hold-text: #581c87;
+  --badge-on-hold-border: rgba(107, 33, 168, 0.3);
+
+  --badge-dropped-bg: rgba(225, 29, 72, 0.12);
+  --badge-dropped-text: #9f1239;
+  --badge-dropped-border: rgba(225, 29, 72, 0.3);
+
+  --theme-shadow-card: 0 4px 20px 0 rgba(126, 34, 206, 0.08);
+  --theme-shadow-card-hover:
+    0 8px 24px 0 rgba(126, 34, 206, 0.12), 0 0 12px 0 rgba(168, 85, 247, 0.12);
+  --theme-glow-sm: rgba(126, 34, 206, 0.35);
+  --theme-glow-md: rgba(126, 34, 206, 0.45);
+  --theme-glow-lg: rgba(126, 34, 206, 0.55);
+
+  --body-bg-gradient: radial-gradient(
+    ellipse 80% 35% at 50% 0%,
+    rgba(124, 58, 237, 0.04) 0%,
+    transparent 80%
+  );
+  --scrollbar-thumb: #d8cee8;
+  --scrollbar-track: #f5f2fa;
+  --selection-bg: rgba(124, 58, 237, 0.15);
+  --selection-color: #1e1338;
 }
 
 /* ============================================================
@@ -119,117 +377,427 @@ html {
 }
 
 body {
-  background-color: var(--color-lunar-950);
-  color: var(--color-lunar-200);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
   font-family: var(--font-sans);
   min-height: 100vh;
   overflow-x: hidden;
-  /* Subtle violet radial ambient at the top */
-  background-image: radial-gradient(
-    ellipse 120% 60% at 50% 0%,
-    color-mix(in srgb, var(--color-violet-500) 25%, transparent) 0%,
-    transparent 90%
-  );
+  background-image: var(--body-bg-gradient);
   background-repeat: no-repeat;
   background-attachment: fixed;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 /* Scrollbar — styled for the vault aesthetic */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-lunar-900);
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-violet-700);
+  background: var(--scrollbar-thumb);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-violet-500);
-}
-
-/* Focus ring — accessible but on-brand */
-:focus-visible {
-  outline: 2px solid var(--color-violet-400);
-  outline-offset: 2px;
-  border-radius: var(--radius-xl);
+  background: var(--color-primary);
 }
 
 /* Selection colour */
 ::selection {
-  background: color-mix(in srgb, var(--color-violet-500) 30%, transparent);
-  color: var(--color-violet-100);
+  background: var(--selection-bg);
+  color: var(--selection-color);
+}
+
+/* Number input spinners reset */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 /* ============================================================
-   UTILITY LAYER — Custom utilities not covered by Tailwind
+   UTILITY LAYER
    ============================================================ */
 
+@utility text-gradient-violet {
+  background: var(
+    --theme-title-gradient,
+    linear-gradient(135deg, #ede0ff 0%, #c89aff 50%, #b470ff 100%)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 @layer utilities {
-  .vault-gradient {
-    background: linear-gradient(135deg, var(--color-lunar-950) 0%, var(--color-lunar-900) 50%, var(--color-violet-950) 100%);
-  }
-
-  .card-shimmer {
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      color-mix(in srgb, var(--color-violet-500) 8%, transparent) 50%,
-      transparent 100%
-    );
-    background-size: 200% 100%;
-  }
-
-  .text-gradient-violet {
-    background: linear-gradient(135deg, var(--color-violet-300), var(--color-blossom-400));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .glass-card {
-    background: color-mix(in srgb, var(--color-lunar-900) 60%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid color-mix(in srgb, var(--color-violet-500) 15%, transparent);
-  }
-
-  .border-vault {
-    border-color: color-mix(in srgb, var(--color-violet-500) 20%, transparent);
-  }
-
-  .hide-arrows::-webkit-outer-spin-button,
-  .hide-arrows::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  .hide-arrows {
-    appearance: textfield;
-    -moz-appearance: textfield;
+  .font-handwriting {
+    font-family: var(--font-handwriting);
   }
 
   /* Hide scrollbar for horizontal scrolling menus */
+  .custom-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
   .custom-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  .custom-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
 }
 
-
-
-/* Custom Date Picker Indicator for Dark Mode */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a78bfa'%3E%3Cpath d='M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z'/%3E%3C/svg%3E");
-  opacity: 0.8;
-  transition: opacity 0.2s;
+/* Card hover border & radiant violet glow */
+.media-card-link:hover,
+.group\/container:hover .media-card-link,
+[class*="group/container"]:hover .media-card-link,
+.media-card-link:focus,
+.media-card-link:focus-visible {
+  border-color: var(--color-primary) !important;
+  box-shadow:
+    0 0 0 1.5px var(--color-primary),
+    var(--shadow-card-hover) !important;
 }
-input[type="date"]:focus::-webkit-calendar-picker-indicator,
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23c4b5fd'%3E%3Cpath d='M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z'/%3E%3C/svg%3E");
+
+/* All standard icons in dark mode default to radiant vault purple */
+:where([data-theme="dark"], .dark)
+  svg:not([class*="text-"]):not([style*="color"]):not([data-testid*="Delete"]):not(
+    [data-testid*="delete"]
+  ) {
+  color: var(--color-primary);
+}
+
+/* Only solid floating / quick-action buttons with text-white keep their icons white */
+:where([data-theme="dark"], .dark) button.text-white > svg,
+:where([data-theme="dark"], .dark) .text-white > svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* Hide clear buttons in tags and date pickers */
+.MuiAutocomplete-clearIndicator,
+.MuiPickersInputBase-root .MuiPickersInputBase-clearButton,
+.MuiPickersInputBase-clearButton {
+  display: none !important;
+}
+
+/* Inputs, textareas, and selects on focus in dark mode (excluding MUI wrapped inputs) */
+:where([data-theme="dark"], .dark)
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not(
+    [type="reset"]
+  ):not([class*="Mui"]):not([class*="mui"]):focus,
+:where([data-theme="dark"], .dark) textarea:not([class*="Mui"]):focus,
+:where([data-theme="dark"], .dark) select:not([class*="Mui"]):focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(180, 112, 255, 0.35);
+}
+
+.MuiInputBase-input,
+.MuiInputBase-input:focus,
+.MuiInputBase-input:focus-visible,
+.MuiAutocomplete-input,
+.MuiAutocomplete-input:focus,
+.MuiAutocomplete-input:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Focus ring — accessible but on-brand */
+:where([data-theme="dark"], .dark)
+  :focus-visible:not(input):not(textarea):not(select):not([class*="Mui"]) {
+  outline: 2px solid #b470ff;
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   DYNAMIC THEME-DRIVEN BADGE CLASSES
+   ============================================================ */
+
+.badge-type-movie {
+  background-color: var(--badge-movie-bg);
+  color: var(--badge-movie-text);
+  border-color: var(--badge-movie-border);
+}
+.badge-type-series {
+  background-color: var(--badge-series-bg);
+  color: var(--badge-series-text);
+  border-color: var(--badge-series-border);
+}
+.badge-type-book {
+  background-color: var(--badge-book-bg);
+  color: var(--badge-book-text);
+  border-color: var(--badge-book-border);
+}
+.badge-type-recipe {
+  background-color: var(--badge-recipe-bg);
+  color: var(--badge-recipe-text);
+  border-color: var(--badge-recipe-border);
+}
+
+.badge-status-completed {
+  background-color: var(--badge-completed-bg);
+  color: var(--badge-completed-text);
+  border-color: var(--badge-completed-border);
+}
+.badge-status-in-progress {
+  background-color: var(--badge-in-progress-bg);
+  color: var(--badge-in-progress-text);
+  border-color: var(--badge-in-progress-border);
+}
+.badge-status-plan {
+  background-color: var(--badge-plan-bg);
+  color: var(--badge-plan-text);
+  border-color: var(--badge-plan-border);
+}
+.badge-status-on-hold {
+  background-color: var(--badge-on-hold-bg);
+  color: var(--badge-on-hold-text);
+  border-color: var(--badge-on-hold-border);
+}
+.badge-status-dropped {
+  background-color: var(--badge-dropped-bg);
+  color: var(--badge-dropped-text);
+  border-color: var(--badge-dropped-border);
+}
+
+/* ============================================================
+   MUI DATE PICKER & SELECT PORTAL THEME STYLING
+   ============================================================ */
+
+/* DatePicker input field (where numbers and date are written) */
+.MuiPickersTextField-root {
+  width: 100%;
+}
+
+.MuiPickersInputBase-root,
+.MuiPickersOutlinedInput-root {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  background-color: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-xl) !important;
+  padding-left: 14px !important;
+  padding-right: 10px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  box-sizing: border-box !important;
+  font-family: inherit !important;
+  font-size: 0.8125rem !important;
+  color: var(--color-foreground) !important;
+  transition: all 0.15s ease !important;
+}
+
+.MuiPickersInputBase-root:hover,
+.MuiPickersOutlinedInput-root:hover {
+  border-color: var(--color-primary) !important;
+}
+
+.MuiPickersInputBase-root.Mui-focused,
+.MuiPickersOutlinedInput-root.Mui-focused {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px rgba(180, 112, 255, 0.35) !important;
+}
+
+.MuiPickersOutlinedInput-notchedOutline,
+.MuiPickersInputBase-notchedOutline,
+.MuiPickersOutlinedInput-root fieldset {
+  display: none !important;
+  border: none !important;
+}
+
+.MuiPickersInputBase-sectionsContainer,
+.MuiPickersSectionList-root {
+  padding: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  font-family: inherit !important;
+  font-size: 0.8125rem !important;
+  color: var(--color-foreground) !important;
+  line-height: 38px !important;
+  letter-spacing: normal !important;
+}
+
+.MuiPickersSectionList-section {
+  font-family: inherit !important;
+  font-size: 0.8125rem !important;
+  color: var(--color-foreground) !important;
+  line-height: normal !important;
+}
+
+.MuiPickersSectionList-sectionContent,
+.MuiPickersInputBase-sectionContent {
+  font-family: inherit !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  color: var(--color-foreground) !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 1px 3px !important;
+  border-radius: 4px !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.MuiPickersSectionList-sectionContent:focus,
+.MuiPickersInputBase-sectionContent:focus,
+.MuiPickersSectionList-sectionContent[data-selected="true"] {
+  background-color: rgba(180, 112, 255, 0.25) !important;
+  color: var(--color-primary) !important;
+  outline: none !important;
+}
+
+.MuiPickersInputBase-sectionBefore,
+.MuiPickersInputBase-sectionAfter,
+.MuiPickersSectionList-sectionSeparator {
+  color: var(--color-muted) !important;
+  font-family: inherit !important;
+  font-size: 0.8125rem !important;
+  padding: 0 1px !important;
+}
+
+.MuiPickersInputBase-input,
+.MuiPickersOutlinedInput-input {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.MuiPickersInputBase-adornedEnd .MuiInputAdornment-root {
+  margin: 0 !important;
+  margin-left: auto !important;
+  padding: 0 !important;
+}
+
+.MuiPickersInputBase-adornedEnd .MuiIconButton-root,
+.MuiPickersInputBase-adornedEnd .MuiIconButton-edgeEnd {
+  padding: 4px !important;
+  margin: 0 !important;
+  margin-right: 0 !important;
+  width: 26px !important;
+  height: 26px !important;
+  color: var(--color-primary) !important;
+  transition: all 0.15s ease !important;
+}
+
+.MuiPickersInputBase-adornedEnd .MuiIconButton-root:hover,
+.MuiPickersInputBase-adornedEnd .MuiIconButton-edgeEnd:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+.MuiPickersInputBase-adornedEnd .MuiSvgIcon-root {
+  font-size: 1rem !important;
+}
+
+.MuiPickersPopper-root .MuiPaper-root {
+  background-color: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-foreground) !important;
+  box-shadow: var(--shadow-card-hover) !important;
+  border-radius: var(--radius-xl) !important;
+}
+
+.MuiPickersCalendarHeader-label,
+.MuiPickersCalendarHeader-root,
+.MuiDayCalendar-weekDayLabel,
+.MuiPickersYear-yearButton,
+.MuiPickersMonth-monthButton,
+.MuiPickersDay-root {
+  color: var(--color-foreground) !important;
+}
+
+.MuiPickersDay-root:hover,
+.MuiPickersYear-yearButton:hover,
+.MuiPickersMonth-monthButton:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+.MuiPickersDay-root.Mui-selected,
+.MuiPickersYear-yearButton.Mui-selected,
+.MuiPickersMonth-monthButton.Mui-selected {
+  background-color: var(--color-primary) !important;
+  color: #ffffff !important;
+}
+
+.MuiPickersDay-root.MuiPickersDay-today {
+  border: 1px solid var(--color-primary) !important;
+}
+
+.MuiPickersDay-dayOutsideMonth {
+  opacity: 0.3 !important;
+}
+
+.MuiPickersPopper-root svg {
+  color: var(--color-primary) !important;
+}
+
+.MuiMenu-paper {
+  background-color: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-card-hover) !important;
+  color: var(--color-foreground) !important;
+  padding: 4px !important;
+}
+
+.MuiMenuItem-root {
+  border-radius: var(--radius-lg) !important;
+  font-size: 0.8125rem !important;
+  padding: 6px 12px !important;
+  margin: 2px 0 !important;
+  color: var(--color-foreground) !important;
+  transition: all 0.15s ease !important;
+}
+
+.MuiMenuItem-root:hover {
+  background-color: var(--color-surface-hover) !important;
+  color: var(--color-primary) !important;
+}
+
+.MuiMenuItem-root.Mui-selected {
+  background-color: rgba(180, 112, 255, 0.15) !important;
+  color: var(--color-primary) !important;
+  font-weight: 600 !important;
+}
+
+.MuiMenuItem-root.Mui-selected:hover {
+  background-color: rgba(180, 112, 255, 0.25) !important;
+}
+
+.MuiAutocomplete-paper {
+  background-color: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-card-hover) !important;
+  color: var(--color-foreground) !important;
+  padding: 4px !important;
+}
+
+.MuiAutocomplete-option {
+  border-radius: var(--radius-lg) !important;
+  font-size: 0.8125rem !important;
+  padding: 6px 12px !important;
+  margin: 2px 0 !important;
+  color: var(--color-foreground) !important;
+  transition: all 0.15s ease !important;
+}
+
+.MuiAutocomplete-option:hover,
+.MuiAutocomplete-option[data-focus="true"] {
+  background-color: var(--color-surface-hover) !important;
+  color: var(--color-primary) !important;
+}
+
+.MuiAutocomplete-option[aria-selected="true"] {
+  background-color: rgba(180, 112, 255, 0.15) !important;
+  color: var(--color-primary) !important;
+  font-weight: 600 !important;
 }

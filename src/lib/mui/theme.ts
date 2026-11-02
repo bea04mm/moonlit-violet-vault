@@ -1,61 +1,79 @@
 /**
- * Custom Material UI theme for the Moonlit Violet Vault.
+ * Lean Material UI theme configuration for the Moonlit Violet Vault.
+ * Aligned with the Linear / Raycast Dark Craft palette and Warm Paper Craft Light palette.
  * Palette colours are aligned with the CSS custom properties defined in globals.css
  * so that MUI components and Tailwind utilities always match visually.
- * 
+ *
  * @packageDocumentation
  */
-"use client";
+"use client"
 
-import { createTheme } from "@mui/material/styles";
+import { createTheme } from "@mui/material/styles"
+import type {} from "@mui/x-date-pickers/themeAugmentation"
 
-// A custom dark theme matching the vault's moonlit violet aesthetic
-const theme = createTheme({
+/**
+ * Material UI theme configuration for Dark Craft mode.
+ * A custom dark theme matching the vault's moonlit violet aesthetic.
+ */
+export const darkTheme = createTheme({
   palette: {
     mode: "dark",
     primary: {
-      main: "#8b5cf6",        // --color-violet-500
-      dark: "#7c3aed",        // --color-violet-600
-      light: "#a78bfa",       // --color-violet-400
+      main: "#b470ff",
+      dark: "#8230f0",
+      light: "#dbbfff",
       contrastText: "#ffffff",
     },
     secondary: {
-      main: "#4ade80",        // Starlight/Green accent
+      main: "#34d399",
     },
     error: {
-      main: "#f87171",        // Red 400 — used for delete actions
+      main: "#ef4444",
     },
     background: {
-      default: "#110e1f",     // --color-lunar-950 (page background)
-      paper: "#1e1833",       // --color-lunar-900 (cards and modals)
+      default: "#0a0910",
+      paper: "#13111c",
     },
     text: {
-      primary: "#f9fafb",     // --color-lunar-50
-      secondary: "#9ca3af",   // --color-lunar-400
+      primary: "#ede0ff",
+      secondary: "#dbbfff",
     },
+    divider: "rgba(180, 112, 255, 0.18)",
   },
   typography: {
-    // Inherit the Next.js Google font variables injected in RootLayout
     fontFamily: "inherit",
   },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: "0.75rem", // rounded-xl — matches the vault card radius
-          textTransform: "none",   // No ALL-CAPS labels
-          fontWeight: 600,
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: "0.5rem", // rounded-lg
-        },
-      },
-    },
-  },
-});
+})
 
-export default theme;
+/**
+ * Material UI theme configuration for Warm Paper Craft Light mode.
+ */
+export const lightTheme = createTheme({
+  palette: {
+    mode: "light",
+    primary: {
+      main: "#7e22ce",
+      dark: "#581c87",
+      light: "#9333ea",
+      contrastText: "#ffffff",
+    },
+    secondary: {
+      main: "#059669",
+    },
+    error: {
+      main: "#dc2626",
+    },
+    background: {
+      default: "#f5f2fa",
+      paper: "#ffffff",
+    },
+    text: {
+      primary: "#26123e",
+      secondary: "#5c457d",
+    },
+    divider: "#d8cee8",
+  },
+  typography: {
+    fontFamily: "inherit",
+  },
+})
