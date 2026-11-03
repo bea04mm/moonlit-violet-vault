@@ -1,21 +1,22 @@
 /**
  * Root layout — wraps every page in the application.
- * Loads three Google fonts via Next.js font optimisation:
+ * Loads Google fonts via Next.js font optimisation:
  *  - Geist Sans (body text)
  *  - Geist Mono (code/numbers)
  *  - Bricolage Grotesque (display/heading font, exposed as --font-display CSS var)
- * Sets viewport metadata, injects the MUI dark theme, registers the ServiceWorker,
+ *  - Caveat (handwritten accent font for curator notes, exposed as --font-handwriting)
+ * Sets viewport metadata, injects the MUI dark/light themes, registers the ServiceWorker,
  * and mounts the global CommandPalette (Ctrl+K) at the very top level.
- * 
+ *
  * @packageDocumentation
  */
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Bricolage_Grotesque } from "next/font/google";
-import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
-import MuiProvider from "@/lib/mui/MuiProvider";
-import { CommandPalette } from "@/components/layout/CommandPalette";
-import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister";
-import "./globals.css";
+import type { Metadata } from "next"
+import { Geist, Geist_Mono, Bricolage_Grotesque, Caveat } from "next/font/google"
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter"
+import MuiProvider from "@/lib/mui/MuiProvider"
+import { CommandPalette } from "@/components/layout/CommandPalette"
+import { ServiceWorkerRegister } from "@/components/layout/ServiceWorkerRegister"
+import "./globals.css"
 
 /**
  * Configuration for the Geist Sans font, used globally for body text.
@@ -23,7 +24,7 @@ import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-});
+})
 
 /**
  * Configuration for the Geist Mono font, used for code snippets and numbers.
@@ -31,7 +32,7 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
+})
 
 /**
  * Configuration for the Bricolage Grotesque font, serving as the display and heading font.
@@ -40,16 +41,28 @@ const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
-});
+})
 
-import type { Viewport } from "next";
+/**
+ * Configuration for the Caveat handwriting font, used for personal curator notes, badges, and journal touches.
+ */
+const caveat = Caveat({
+  variable: "--font-handwriting",
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+})
+
+import type { Viewport } from "next"
 
 /**
  * Viewport configuration including theme colors for mobile browsers.
  */
 export const viewport: Viewport = {
-  themeColor: "#0a0a0f",
-};
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0910" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f2fa" },
+  ],
+}
 
 /**
  * Global application metadata including titles, descriptions, and OpenGraph tags.
@@ -61,7 +74,7 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   description:
-    "A personal media vault for movies, TV series, books, and recipes — beautifully organised under moonlit violet skies.",
+    "A personal media vault for movies, TV series, books, and recipes — curated with care.",
   keywords: ["media tracker", "movies", "books", "tv series", "personal vault"],
   authors: [{ name: "Moonlit Violet Vault" }],
   appleWebApp: {
@@ -71,15 +84,15 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Moonlit Violet Vault",
-    description: "My personal media sanctuary.",
+    description: "Personal media sanctuary.",
     type: "website",
   },
-};
+}
 
 /**
  * The root layout component of the Next.js application.
  * Wraps all pages in necessary providers, injects global fonts, and applies base styling.
- * 
+ *
  * @param props - Component properties.
  * @param props.children - The child components and pages to render within the layout.
  * @returns The HTML structure containing the styled layout and wrapped children.
@@ -87,15 +100,22 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} ${caveat.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("vault-theme")||"dark";document.documentElement.setAttribute("data-theme",t);document.documentElement.classList.remove("light","dark");document.documentElement.classList.add(t);}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="bg-background text-foreground flex min-h-full flex-col">
         <AppRouterCacheProvider>
           <MuiProvider>
             <ServiceWorkerRegister />
@@ -105,5 +125,5 @@ export default function RootLayout({
         </AppRouterCacheProvider>
       </body>
     </html>
-  );
+  )
 }
