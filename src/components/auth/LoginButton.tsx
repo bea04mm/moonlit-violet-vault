@@ -1,35 +1,35 @@
 /**
  * Interactive Google OAuth sign-in button.
- * 
+ *
  * @packageDocumentation
  */
-"use client";
+"use client"
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 /**
  * Interactive Google OAuth sign-in button — 'use client' because it calls
  * the Supabase browser client and handles a user click event.
  */
 export function LoginButton() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false)
 
   /**
    * Triggers the Google OAuth sign-in flow via Supabase.
    */
   async function handleGoogleSignIn() {
-    setIsLoading(true);
+    setIsLoading(true)
     /**
      * Initialized Supabase client.
      */
-    const supabase = createClient();
+    const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
-    });
+    })
     // No need to setIsLoading(false) — browser will navigate away
   }
 
@@ -38,36 +38,7 @@ export function LoginButton() {
       id="google-signin-btn"
       onClick={handleGoogleSignIn}
       disabled={isLoading}
-      className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-2xl font-medium text-sm transition-all duration-200 border"
-      style={{
-        background: isLoading
-          ? "color-mix(in srgb, var(--color-lunar-800) 80%, transparent)"
-          : "color-mix(in srgb, var(--color-violet-500) 15%, transparent)",
-        borderColor: isLoading
-          ? "var(--color-lunar-600)"
-          : "color-mix(in srgb, var(--color-violet-500) 40%, transparent)",
-        color: isLoading
-          ? "var(--color-lunar-500)"
-          : "var(--color-violet-200)",
-        boxShadow: isLoading ? "none" : "var(--shadow-glow-sm)",
-        cursor: isLoading ? "not-allowed" : "pointer",
-      }}
-      onMouseEnter={(e) => {
-        if (!isLoading) {
-          (e.target as HTMLButtonElement).style.boxShadow =
-            "var(--shadow-glow-md)";
-          (e.target as HTMLButtonElement).style.borderColor =
-            "color-mix(in srgb, var(--color-violet-500) 70%, transparent)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isLoading) {
-          (e.target as HTMLButtonElement).style.boxShadow =
-            "var(--shadow-glow-sm)";
-          (e.target as HTMLButtonElement).style.borderColor =
-            "color-mix(in srgb, var(--color-violet-500) 40%, transparent)";
-        }
-      }}
+      className="bg-surface hover:bg-surface-elevated text-foreground border-border hover:border-primary flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border px-4 py-2.5 text-xs font-medium shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
     >
       {isLoading ? (
         <>
@@ -81,7 +52,7 @@ export function LoginButton() {
         </>
       )}
     </button>
-  );
+  )
 }
 
 /**
@@ -107,7 +78,7 @@ function GoogleIcon() {
         fill="#EA4335"
       />
     </svg>
-  );
+  )
 }
 
 /**
@@ -123,14 +94,7 @@ function LoadingSpinner() {
       fill="none"
       aria-hidden="true"
     >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeOpacity="0.3"
-      />
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.3" />
       <path
         d="M12 2a10 10 0 0 1 10 10"
         stroke="currentColor"
@@ -138,5 +102,5 @@ function LoadingSpinner() {
         strokeLinecap="round"
       />
     </svg>
-  );
+  )
 }
