@@ -3,40 +3,46 @@
  *
  * @packageDocumentation
  */
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp"
 
 /**
  * Shows a back-to-top button after the user has scrolled down the page.
  */
 export function BackToTopButton() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     const updateVisibility = () => {
-      setIsVisible(window.scrollY > 300);
-    };
+      setIsVisible(window.scrollY > 400)
+    }
 
-    updateVisibility();
-    window.addEventListener("scroll", updateVisibility, { passive: true });
-    return () => window.removeEventListener("scroll", updateVisibility);
-  }, []);
+    updateVisibility()
+    window.addEventListener("scroll", updateVisibility, { passive: true })
+    return () => window.removeEventListener("scroll", updateVisibility)
+  }, [])
+
+  const isDetailPage = /^\/(movies|series|books|recipes)\/[^/]+/.test(pathname)
 
   return (
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      className={`fixed bottom-24 right-8 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-violet-400/30 bg-(--color-lunar-900) text-violet-300 text-sm shadow-[0_4px_14px_0_rgba(167,139,250,0.25)] transition-all hover:scale-110 hover:bg-violet-950 cursor-pointer ${
+      className={`fixed ${
+        isDetailPage ? "right-5 bottom-5" : "right-4 bottom-18 sm:right-6 sm:bottom-23"
+      } border-primary/25 bg-surface-elevated/95 text-primary hover:text-accent hover:border-primary/40 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl border shadow-lg backdrop-blur-md transition-all active:scale-95 sm:h-9 sm:w-9 ${
         isVisible
           ? "pointer-events-auto translate-y-0 opacity-100"
-          : "pointer-events-none translate-y-3 opacity-0"
+          : "pointer-events-none translate-y-2 opacity-0"
       }`}
       aria-label="Back to top"
       title="Back to top"
       tabIndex={isVisible ? 0 : -1}
     >
-      <KeyboardArrowUpIcon />
+      <KeyboardArrowUpIcon fontSize="small" />
     </button>
-  );
+  )
 }
