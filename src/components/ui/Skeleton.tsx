@@ -7,7 +7,7 @@
  * The properties available to customize a generic Skeleton.
  */
 export interface SkeletonProps {
-  className?: string;
+  className?: string
 }
 
 /**
@@ -19,16 +19,10 @@ export interface SkeletonProps {
 export function Skeleton({ className = "" }: SkeletonProps) {
   return (
     <div
-      className={`rounded-2xl animate-pulse ${className}`}
-      style={{
-        background:
-          "linear-gradient(90deg, var(--color-lunar-800) 0%, var(--color-lunar-700) 50%, var(--color-lunar-800) 100%)",
-        backgroundSize: "200% 100%",
-        animation: "shimmer 2s linear infinite",
-      }}
+      className={`animate-pulse rounded-lg border border-violet-500/20 bg-violet-950/30 dark:border-violet-500/30 dark:bg-violet-950/40 ${className}`}
       aria-hidden="true"
     />
-  );
+  )
 }
 
 /**
@@ -36,18 +30,12 @@ export function Skeleton({ className = "" }: SkeletonProps) {
  */
 export function MediaCardSkeleton() {
   return (
-    <div
-      className="flex flex-row h-40 sm:h-48 rounded-3xl overflow-hidden border w-full"
-      style={{
-        background: "var(--color-lunar-950)",
-        borderColor: "color-mix(in srgb, var(--color-violet-500) 15%, transparent)",
-      }}
-    >
+    <div className="bg-surface/90 flex h-40 w-full flex-row overflow-hidden rounded-xl border border-violet-500/25 sm:h-48">
       {/* Cover image area */}
-      <Skeleton className="w-28 sm:w-32 h-full shrink-0 rounded-none" />
+      <Skeleton className="h-full w-28 shrink-0 rounded-none border-none sm:w-32" />
       {/* Text area */}
-      <div className="p-4 flex-1 flex flex-col gap-3">
-        <Skeleton className="h-5 w-3/4 mt-1" />
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <Skeleton className="mt-1 h-4 w-3/4" />
         <Skeleton className="h-3 w-1/2" />
         <Skeleton className="h-3 w-1/3" />
         <div className="mt-auto space-y-2">
@@ -56,5 +44,5 @@ export function MediaCardSkeleton() {
         </div>
       </div>
     </div>
-  );
+  )
 }
