@@ -1,178 +1,220 @@
 /**
  * Tabbed Dashboard component for organizing media items.
- * 
+ *
  * @packageDocumentation
  */
-/* eslint-disable react-hooks/preserve-manual-memoization, @typescript-eslint/no-explicit-any */
-"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client"
 
-import { useState, useMemo, useEffect } from "react";
-import { useSearchParams, usePathname } from "next/navigation";
-import type { MediaItem, MediaType } from "@/lib/supabase/database.types";
-import { MediaGrid } from "./MediaGrid";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useMemo, useEffect } from "react"
+import { useSearchParams, usePathname } from "next/navigation"
+import type { MediaItem, MediaType } from "@/lib/supabase/database.types"
+import { MediaGrid } from "./MediaGrid"
+import { FormControl, Select, MenuItem } from "@mui/material"
+import { PageHeader } from "@/components/layout/PageHeader"
 
 /**
  * Props interface for the TabbedDashboardProps.
  */
 export interface TabbedDashboardProps {
-  type: MediaType;
-  items: MediaItem[];
-  headerNode?: React.ReactNode;
+  type: MediaType
+  items: MediaItem[]
+  title?: string
+  accent?: string
+  description?: string
+  headerNode?: React.ReactNode
 }
 
 export interface TabbedDashboardLoadingProps {
-  headerNode: React.ReactNode;
-  tabs: string[];
+  title?: string
+  accent?: string
+  description?: string
+  headerNode?: React.ReactNode
+  tabs: string[]
 }
 
 export function TabbedDashboardLoading({
+  title,
+  accent,
+  description,
   headerNode,
   tabs,
 }: TabbedDashboardLoadingProps) {
+  const tabsSkeleton = (
+    <div className="bg-surface border-border custom-scrollbar flex w-full max-w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-xl border p-1 lg:w-auto">
+      {tabs.map((tab) => (
+        <div
+          key={tab}
+          className="h-8 w-24 shrink-0 animate-pulse rounded-lg border border-violet-500/20 bg-violet-950/40"
+        />
+      ))}
+      <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
+      <div className="h-8 w-32 shrink-0 animate-pulse rounded-lg border border-violet-500/20 bg-violet-950/40" />
+    </div>
+  )
+
+  if (title) {
+    return (
+      <PageHeader title={title} accent={accent} description={description}>
+        {tabsSkeleton}
+      </PageHeader>
+    )
+  }
+
   return (
-    <div
-      className="sticky top-23.25 md:top-16 z-30 pb-6 pt-4 border-b border-white/10"
-      style={{
-        background: "color-mix(in srgb, var(--color-lunar-950) 85%, transparent)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        marginLeft: "calc(50% - 50vw)",
-        marginRight: "calc(50% - 50vw)",
-        paddingLeft: "calc(50vw - 50%)",
-        paddingRight: "calc(50vw - 50%)",
-      }}
-    >
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+    <div className="border-border mb-6 border-b pb-4">
+      <div className="flex min-w-0 flex-col justify-between gap-4 lg:flex-row lg:items-end">
         {headerNode}
-        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-4">
-          <div className="flex flex-nowrap gap-2">
-            {tabs.map((tab) => (
-              <div
-                key={tab}
-                className="h-10 w-28 shrink-0 animate-pulse rounded-full bg-lunar-900"
-              />
-            ))}
-          </div>
-          <div className="h-10 w-44 shrink-0 animate-pulse rounded-xl bg-lunar-900" />
-        </div>
+        <div className="flex w-full max-w-full min-w-0 items-center lg:w-auto">{tabsSkeleton}</div>
       </div>
     </div>
-  );
+  )
 }
 
 /**
  * Configuration object for a dashboard filter tab.
  */
 type TabConfig = {
-  id: string;
-  label: string;
-  filterFn: (item: MediaItem) => boolean;
-};
+  id: string
+  label: string
+  filterFn: (item: MediaItem) => boolean
+}
 
 /**
  * Tabbed interface for filtering media lists by status.
  */
-export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProps) {
+export function TabbedDashboard({
+  type,
+  items,
+  title,
+  accent,
+  description,
+  headerNode,
+}: TabbedDashboardProps) {
   /**
    * Array of tab configuration objects defining filters and labels for the media dashboard.
    */
-  let tabs: TabConfig[] = [];
+  let tabs: TabConfig[] = []
 
   if (type === "series") {
     tabs = [
       { id: "watching", label: "Watching", filterFn: (item) => item.status === "watching" },
-      { id: "want_to_watch", label: "Want to Watch", filterFn: (item) => item.status === "want_to_watch" },
-      { id: "waiting", label: "Waiting", filterFn: (item) => item.status === "watched" && item.tmdb_status === "Returning Series" },
-      { id: "ended", label: "Ended", filterFn: (item) => item.status === "watched" && item.tmdb_status !== "Returning Series" },
-      { id: "other", label: "Other", filterFn: (item) => ["dropped", "on_hold"].includes(item.status) },
-    ];
+      {
+        id: "want_to_watch",
+        label: "Want to Watch",
+        filterFn: (item) => item.status === "want_to_watch",
+      },
+      {
+        id: "waiting",
+        label: "Waiting",
+        filterFn: (item) => item.status === "watched" && item.tmdb_status === "Returning Series",
+      },
+      {
+        id: "ended",
+        label: "Ended",
+        filterFn: (item) => item.status === "watched" && item.tmdb_status !== "Returning Series",
+      },
+      {
+        id: "other",
+        label: "Other",
+        filterFn: (item) => ["dropped", "on_hold"].includes(item.status),
+      },
+    ]
   } else if (type === "movie") {
     tabs = [
-      { id: "want_to_watch", label: "Want to Watch", filterFn: (item) => item.status === "want_to_watch" },
+      {
+        id: "want_to_watch",
+        label: "Want to Watch",
+        filterFn: (item) => item.status === "want_to_watch",
+      },
       { id: "watching", label: "Watching", filterFn: (item) => item.status === "watching" },
       { id: "watched", label: "Watched", filterFn: (item) => item.status === "watched" },
-      { id: "other", label: "Other", filterFn: (item) => ["dropped", "on_hold"].includes(item.status) },
-    ];
+      {
+        id: "other",
+        label: "Other",
+        filterFn: (item) => ["dropped", "on_hold"].includes(item.status),
+      },
+    ]
   } else if (type === "book") {
     tabs = [
       { id: "reading", label: "Reading", filterFn: (item) => item.status === "reading" },
-      { id: "want_to_read", label: "Want to Read", filterFn: (item) => item.status === "want_to_read" },
+      {
+        id: "want_to_read",
+        label: "Want to Read",
+        filterFn: (item) => item.status === "want_to_read",
+      },
       { id: "read", label: "Read", filterFn: (item) => item.status === "read" },
-      { id: "other", label: "Other", filterFn: (item) => ["dropped", "on_hold"].includes(item.status) },
-    ];
+      {
+        id: "other",
+        label: "Other",
+        filterFn: (item) => ["dropped", "on_hold"].includes(item.status),
+      },
+    ]
   } else if (type === "recipe") {
     tabs = [
-      { id: "want_to_cook", label: "Want to Cook", filterFn: (item) => item.status === "want_to_cook" || item.status === "want_to_watch" },
-      { id: "cooked", label: "Cooked", filterFn: (item) => item.status === "cooked" || item.status === "watched" },
-      { id: "other", label: "Other", filterFn: (item) => ["dropped", "on_hold"].includes(item.status) },
-    ];
+      { id: "want_to_cook", label: "To Cook", filterFn: (item) => item.status === "want_to_cook" },
+      { id: "cooked", label: "Cooked", filterFn: (item) => item.status === "cooked" },
+    ]
   }
 
   // Filter out tabs that have 0 items (except the first two to keep UI consistent)
-  const activeTabs = tabs.filter((tab, index) => {
-    if (index < 2) return true;
-    return items.some(tab.filterFn);
-  });
-
+  const activeTabs = tabs
   /**
    * Next.js hook for accessing the current URL search parameters.
    */
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams()
   /**
    * Current URL pathname used to determine the active route or media type context.
    */
-  const pathname = usePathname();
+  const pathname = usePathname()
 
-  /**
-   * The currently selected tab ID extracted from the URL query string.
-   */
-  const urlTab = searchParams.get("tab");
-  /**
-   * The fallback tab ID to use if no valid tab is specified in the URL.
-   */
-  const defaultTabId = activeTabs.some(t => t.id === urlTab) ? urlTab! : activeTabs[0].id;
+  const [activeTabId, setActiveTabId] = useState<string>(() => {
+    /**
+     * The currently selected tab ID extracted from the URL query string.
+     */
+    const tabParam = searchParams.get("tab")
+    /**
+     * The fallback tab ID to use if no valid tab is specified in the URL.
+     */
+    return activeTabs.some((t) => t.id === tabParam) ? (tabParam as string) : activeTabs[0]?.id
+  })
 
-  const [activeTabId, setActiveTabId] = useState(defaultTabId);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<"date_added" | "title" | "release_year" | "user_rating">("date_added");
+  const [sortBy, setSortBy] = useState<"date_added" | "title" | "release_year" | "user_rating">(
+    "date_added"
+  )
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   useEffect(() => {
     const handlePopState = () => {
-      const nextTab = new URLSearchParams(window.location.search).get("tab");
-      if (nextTab && activeTabs.some((tab) => tab.id === nextTab)) {
-        setActiveTabId(nextTab);
-        setSelectedTags([]);
+      const currentTab = new URLSearchParams(window.location.search).get("tab")
+      if (currentTab && activeTabs.some((t) => t.id === currentTab)) {
+        setActiveTabId(currentTab)
       }
-    };
+    }
 
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [activeTabs]);
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [activeTabs])
 
   /**
    * Changes the active tab, updates the URL without a route transition, and returns to the page top.
    */
   const handleTabChange = (tabId: string) => {
-    setActiveTabId(tabId);
-    setSelectedTags([]);
+    setActiveTabId(tabId)
+    setSelectedTags([])
     /**
      * Mutable URLSearchParams instance used to construct the updated URL query string.
      */
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tabId);
-    window.history.replaceState(
-      window.history.state,
-      "",
-      `${pathname}?${params.toString()}`
-    );
-    window.scrollTo({ top: 0, behavior: "auto" });
-  };
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("tab", tabId)
+    window.history.replaceState(window.history.state, "", `${pathname}?${params.toString()}`)
+    window.scrollTo({ top: 0, behavior: "auto" })
+  }
 
   /**
    * The currently active tab configuration object based on state or URL.
    */
-  const activeTab = activeTabs.find((t) => t.id === activeTabId) || activeTabs[0];
+  const activeTab = activeTabs.find((t) => t.id === activeTabId) || activeTabs[0]
 
   /**
    * Memoized array of media items filtered by the active tab and selected tags, and sorted by user preference.
@@ -181,92 +223,130 @@ export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProp
     /**
      * Intermediate array holding the filtered media items before applying tags and sorting.
      */
-    let result = items.filter(activeTab.filterFn);
+    let result = items.filter(activeTab.filterFn)
 
     if (selectedTags.length > 0) {
-      result = result.filter((item) =>
-        selectedTags.every((t) => (item.tags || []).includes(t))
-      );
+      result = result.filter((item) => selectedTags.every((t) => (item.tags || []).includes(t)))
     }
 
     return result.sort((a, b) => {
-      if (sortBy === "title") return a.title.localeCompare(b.title);
-      if (sortBy === "release_year") return (b.release_year || 0) - (a.release_year || 0);
-      if (sortBy === "user_rating") return (b.user_rating || 0) - (a.user_rating || 0);
-      return new Date(b.date_added).getTime() - new Date(a.date_added).getTime(); // default: newest first
-    });
-  }, [items, activeTab, selectedTags, sortBy]);
+      if (sortBy === "title") return a.title.localeCompare(b.title)
+      if (sortBy === "release_year") return (b.release_year || 0) - (a.release_year || 0)
+      if (sortBy === "user_rating") return (b.user_rating || 0) - (a.user_rating || 0)
+      return new Date(b.date_added).getTime() - new Date(a.date_added).getTime()
+    })
+  }, [items, activeTab, selectedTags, sortBy])
 
   // Extract tags from the current tab's items (before filtering by tags)
-  const availableTags = Array.from(new Set(items.filter(activeTab.filterFn).flatMap((item) => item.tags || []))).sort();
+  const availableTags = Array.from(
+    new Set(items.filter(activeTab.filterFn).flatMap((item) => item.tags || []))
+  ).sort()
+
+  const tabsControls = (
+    <div className="bg-surface border-border custom-scrollbar flex w-full max-w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-xl border p-1 lg:w-auto">
+      {/* Tab Navigation */}
+      {activeTabs.map((tab) => {
+        const count = items.filter(tab.filterFn).length
+        const isActive = activeTabId === tab.id
+        return (
+          <button
+            key={tab.id}
+            onClick={() => handleTabChange(tab.id)}
+            className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-all sm:px-3 ${
+              isActive
+                ? "bg-primary/15 text-primary border-primary/35 border font-semibold shadow-xs"
+                : "text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent"
+            }`}
+          >
+            <span>{tab.label}</span>
+            <span
+              className={`py-0.2 rounded px-1.5 font-mono text-[10px] ${isActive ? "bg-primary/25 text-primary font-semibold" : "bg-primary/10 text-primary/80 border-primary/20 border"}`}
+            >
+              {count}
+            </span>
+          </button>
+        )
+      })}
+
+      <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
+
+      {/* Sorting Dropdown */}
+      <FormControl size="small" className="shrink-0">
+        <Select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as any)}
+          displayEmpty
+          sx={{
+            height: 32,
+            fontSize: "0.75rem",
+            fontWeight: 500,
+            borderRadius: "0.5rem",
+            bgcolor: "transparent",
+            color: "var(--color-foreground)",
+            "&:hover": {
+              color: "var(--color-primary)",
+              bgcolor: "var(--color-surface-elevated)",
+            },
+            "&.Mui-focused": {
+              color: "var(--color-primary)",
+              bgcolor: "var(--color-surface-elevated)",
+            },
+            "& .MuiOutlinedInput-notchedOutline": {
+              border: "none",
+            },
+            "&:hover .MuiOutlinedInput-notchedOutline": {
+              border: "none",
+            },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+              border: "none",
+            },
+            "& .MuiSelect-select": {
+              py: "6px",
+              pl: 1.5,
+              pr: "28px !important",
+              display: "flex",
+              alignItems: "center",
+            },
+            "& .MuiSvgIcon-root": {
+              color: "var(--color-primary)",
+              fontSize: "1.1rem",
+              right: "6px",
+            },
+          }}
+        >
+          <MenuItem value="date_added">Recently Added</MenuItem>
+          <MenuItem value="title">Title (A-Z)</MenuItem>
+          <MenuItem value="release_year">Release Year (Newest)</MenuItem>
+          <MenuItem value="user_rating">Rating (Highest)</MenuItem>
+        </Select>
+      </FormControl>
+    </div>
+  )
 
   return (
-    <div className="flex flex-col gap-8 w-full">
-      <div
-        className={headerNode ? "sticky top-23.25 md:top-16 z-30 pb-6 pt-4 border-b border-white/10" : undefined}
-        style={
-          headerNode
-            ? {
-                background: "color-mix(in srgb, var(--color-lunar-950) 85%, transparent)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                marginLeft: "calc(50% - 50vw)",
-                marginRight: "calc(50% - 50vw)",
-                paddingLeft: "calc(50vw - 50%)",
-                paddingRight: "calc(50vw - 50%)",
-              }
-            : undefined
-        }
-      >
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-          {headerNode}
-
-          {/* Header Row: Tabs + Sort */}
-          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-4">
-            {/* Tab Navigation */}
-            <div className="flex flex-nowrap gap-2">
-          {activeTabs.map((tab) => {
-            const count = items.filter(tab.filterFn).length;
-            const isActive = activeTabId === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-(--color-violet-500) text-white shadow-(--shadow-glow-sm)"
-                    : "bg-(--color-lunar-900) text-lunar-400 hover:bg-lunar-800 hover:text-lunar-200"
-                }`}
-              >
-                {tab.label}
-                <span className={`px-2 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-lunar-800 text-lunar-500"}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+    <div className="w-full">
+      {title ? (
+        <PageHeader title={title} accent={accent} description={description}>
+          {tabsControls}
+        </PageHeader>
+      ) : headerNode ? (
+        <div className="border-border mb-6 border-b pb-4">
+          <div className="flex min-w-0 flex-col justify-between gap-4 lg:flex-row lg:items-end">
+            {headerNode}
+            <div className="flex w-full max-w-full min-w-0 items-center lg:w-auto">
+              {tabsControls}
             </div>
-
-            {/* Sorting Dropdown */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="shrink-0 bg-(--color-lunar-900) text-lunar-200 text-sm rounded-xl px-4 py-2 border border-lunar-800 focus:outline-none focus:border-(--color-violet-500) cursor-pointer"
-            >
-              <option value="date_added">Recently Added</option>
-              <option value="title">Title (A-Z)</option>
-              <option value="release_year">Release Year (Newest)</option>
-              <option value="user_rating">My Rating (Highest)</option>
-            </select>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-6 w-full max-w-full min-w-0">{tabsControls}</div>
+      )}
 
       {/* Tag Filters */}
       {availableTags.length > 0 && (
-        <div className="flex flex-wrap gap-2 pt-2 animate-fade-in">
+        <div className="animate-fade-in mb-6 flex flex-wrap gap-1.5">
           {availableTags.map((tag) => {
-            const isSelected = selectedTags.includes(tag);
+            const isSelected = selectedTags.includes(tag)
             return (
               <button
                 key={tag}
@@ -275,32 +355,26 @@ export function TabbedDashboard({ type, items, headerNode }: TabbedDashboardProp
                     isSelected ? prev.filter((t) => t !== tag) : [...prev, tag]
                   )
                 }
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors border ${
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
                   isSelected
-                    ? "bg-[rgba(139,92,246,0.15)] text-violet-300 border-(--color-violet-500)"
-                    : "bg-transparent text-lunar-400 border-lunar-800 hover:border-lunar-600"
+                    ? "bg-primary/20 text-primary border-primary/40 font-medium"
+                    : "bg-surface text-muted border-border hover:border-primary hover:text-foreground"
                 }`}
               >
                 #{tag}
               </button>
-            );
+            )
           })}
         </div>
       )}
 
-      {/* Tab Content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTabId}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-          className="w-full"
-        >
-          <MediaGrid items={filteredItems} emptyMessage={`No items in "${activeTab.label}".`} />
-        </motion.div>
-      </AnimatePresence>
+      {/* Media Grid */}
+      <MediaGrid
+        items={filteredItems}
+        emptyMessage={`No items found in ${activeTab.label.toLowerCase()}${
+          selectedTags.length > 0 ? " with selected tags" : ""
+        }.`}
+      />
     </div>
-  );
+  )
 }
