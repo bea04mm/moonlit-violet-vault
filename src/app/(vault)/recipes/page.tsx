@@ -1,42 +1,21 @@
 /**
  * Recipes gallery — server-fetched list with tabs: Want to Cook, Cooked, Other.
- * 
+ *
  * @packageDocumentation
  */
-import { Suspense } from "react";
-import type { Metadata } from "next";
-import { getMediaList } from "@/lib/services/mediaService";
-import { TabbedDashboard, TabbedDashboardLoading } from "@/components/media/TabbedDashboard";
-import { MediaCardSkeleton } from "@/components/ui/Skeleton";
-import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import { Suspense } from "react"
+import type { Metadata } from "next"
+import { getMediaList } from "@/lib/services/mediaService"
+import { TabbedDashboard, TabbedDashboardLoading } from "@/components/media/TabbedDashboard"
+import { MediaCardSkeleton } from "@/components/ui/Skeleton"
 
 /**
  * Metadata configuration for the recipes gallery page.
  */
 export const metadata: Metadata = {
   title: "Recipes",
-  description: "My recipe collection in the vault.",
-};
-
-/**
- * The header node displayed at the top of the recipes gallery.
- */
-const headerNode = (
-  <div className="pt-2">
-    <div className="flex items-center gap-3 mb-2">
-      <RestaurantMenuIcon fontSize="large" sx={{ color: "var(--color-violet-400)" }} />
-      <h1
-        className="text-4xl font-display font-bold text-gradient-violet"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        Recipes
-      </h1>
-    </div>
-    <p className="text-sm" style={{ color: "var(--color-lunar-500)" }}>
-      Culinary collection.
-    </p>
-  </div>
-);
+  description: "Recipe collection in the vault.",
+}
 
 /**
  * Server component that fetches the list of recipes and renders them in a TabbedDashboard.
@@ -49,10 +28,16 @@ async function RecipesList() {
     type: "recipe",
     sortBy: "date_added",
     sortOrder: "desc",
-  });
+  })
   return (
-    <TabbedDashboard type="recipe" items={recipes} headerNode={headerNode} />
-  );
+    <TabbedDashboard
+      type="recipe"
+      items={recipes}
+      title="Recipes"
+      accent="cookbook"
+      description="Culinary collection & kitchen notes."
+    />
+  )
 }
 
 /**
@@ -60,15 +45,17 @@ async function RecipesList() {
  */
 export default function RecipesPage() {
   return (
-    <div className="animate-fade-in -mt-8">
+    <div className="animate-fade-in">
       <Suspense
         fallback={
           <div>
             <TabbedDashboardLoading
-              headerNode={headerNode}
+              title="Recipes"
+              accent="cookbook"
+              description="Culinary collection & kitchen notes."
               tabs={["Want to Cook", "Cooked", "Other"]}
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-8">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {[...Array(9)].map((_, i) => (
                 <MediaCardSkeleton key={i} />
               ))}
@@ -79,5 +66,5 @@ export default function RecipesPage() {
         <RecipesList />
       </Suspense>
     </div>
-  );
+  )
 }

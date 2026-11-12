@@ -1,44 +1,23 @@
 /**
  * Movies gallery — server-fetched list rendered in a TabbedDashboard
  * with tabs for Want to Watch, Watching, Watched, and Other.
- * 
+ *
  * @packageDocumentation
  */
 
-import { Suspense } from "react";
-import type { Metadata } from "next";
-import { getMediaList } from "@/lib/services/mediaService";
-import { TabbedDashboard, TabbedDashboardLoading } from "@/components/media/TabbedDashboard";
-import { MediaCardSkeleton } from "@/components/ui/Skeleton";
-import MovieIcon from "@mui/icons-material/Movie";
+import { Suspense } from "react"
+import type { Metadata } from "next"
+import { getMediaList } from "@/lib/services/mediaService"
+import { TabbedDashboard, TabbedDashboardLoading } from "@/components/media/TabbedDashboard"
+import { MediaCardSkeleton } from "@/components/ui/Skeleton"
 
 /**
  * Metadata configuration for the movies gallery page.
  */
 export const metadata: Metadata = {
   title: "Movies",
-  description: "My movie collection in the vault.",
-};
-
-/**
- * The header node displayed at the top of the movies gallery.
- */
-const headerNode = (
-  <div className="pt-2">
-    <div className="flex items-center gap-3 mb-2">
-      <MovieIcon fontSize="large" sx={{ color: "var(--color-violet-400)" }} />
-      <h1
-        className="text-4xl font-display font-bold text-gradient-violet"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        Movies
-      </h1>
-    </div>
-    <p className="text-sm" style={{ color: "var(--color-lunar-500)" }}>
-      Cinematic collection.
-    </p>
-  </div>
-);
+  description: "Movie collection in the vault.",
+}
 
 /**
  * Server component that fetches the list of movies and renders them in a TabbedDashboard.
@@ -51,10 +30,16 @@ async function MoviesList() {
     type: "movie",
     sortBy: "date_added",
     sortOrder: "desc",
-  });
+  })
   return (
-    <TabbedDashboard type="movie" items={movies} headerNode={headerNode} />
-  );
+    <TabbedDashboard
+      type="movie"
+      items={movies}
+      title="Movies"
+      accent="cinema log"
+      description="Personal film collection & watchlist."
+    />
+  )
 }
 
 /**
@@ -62,15 +47,17 @@ async function MoviesList() {
  */
 export default function MoviesPage() {
   return (
-    <div className="animate-fade-in -mt-8">
+    <div className="animate-fade-in">
       <Suspense
         fallback={
           <div>
             <TabbedDashboardLoading
-              headerNode={headerNode}
+              title="Movies"
+              accent="cinema log"
+              description="Personal film collection & watchlist."
               tabs={["Want to Watch", "Watching", "Watched", "Other"]}
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-8">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {[...Array(9)].map((_, i) => (
                 <MediaCardSkeleton key={i} />
               ))}
@@ -81,5 +68,5 @@ export default function MoviesPage() {
         <MoviesList />
       </Suspense>
     </div>
-  );
+  )
 }
