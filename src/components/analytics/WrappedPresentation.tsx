@@ -1,23 +1,22 @@
 /**
  * Full-screen slideshow presentation mimicking Spotify Wrapped.
  * Powered by Framer Motion for slide transitions.
- * 
+ *
  * @packageDocumentation
  */
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import type { VaultWrappedData } from "@/lib/services/mediaService";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-import MovieIcon from "@mui/icons-material/Movie";
-import TvIcon from "@mui/icons-material/Tv";
-import StarIcon from "@mui/icons-material/Star";
-import Image from "next/image";
-import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import type { VaultWrappedData } from "@/lib/services/mediaService"
+import PlayArrowIcon from "@mui/icons-material/PlayArrow"
+import AccessTimeIcon from "@mui/icons-material/AccessTime"
+import MenuBookIcon from "@mui/icons-material/MenuBook"
+import MovieIcon from "@mui/icons-material/Movie"
+import TvIcon from "@mui/icons-material/Tv"
+import StarIcon from "@mui/icons-material/Star"
+import Image from "next/image"
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu"
 
 /**
  * Props for the WrappedPresentation component.
@@ -26,7 +25,7 @@ export interface Props {
   /**
    * VaultWrappedData object computed on the server for the requested year.
    */
-  data: VaultWrappedData;
+  data: VaultWrappedData
 }
 
 /**
@@ -34,297 +33,355 @@ export interface Props {
  * Handles keyboard navigation (Arrow keys, Enter, Space, Escape) internally.
  */
 export function WrappedPresentation({ data }: Props) {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0)
 
   /**
    * Advances the slideshow to the next slide, clamping to the final slide index.
    */
-  const nextSlide = () => setCurrentSlide((prev) => Math.min(prev + 1, slides.length - 1));
+  const nextSlide = () => setCurrentSlide((prev) => Math.min(prev + 1, slides.length - 1))
   /**
    * Returns the slideshow to the previous slide, clamping to the initial slide index (0).
    */
-  const prevSlide = () => setCurrentSlide((prev) => Math.max(prev - 1, 0));
+  const prevSlide = () => setCurrentSlide((prev) => Math.max(prev - 1, 0))
 
   useEffect(() => {
     /**
      * Handles keyboard events for navigation through the wrapped presentation.
      * Maps arrow keys, enter, and spacebar to next/prev actions, and Escape to closing the presentation.
-     * 
+     *
      * @param e - The keyboard event triggered by the user.
      */
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === " ") nextSlide();
-      if (e.key === "ArrowLeft") prevSlide();
-      if (e.key === "Enter") nextSlide();
-      if (e.key === "Escape") window.history.back();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+      if (e.key === "ArrowRight" || e.key === " ") nextSlide()
+      if (e.key === "ArrowLeft") prevSlide()
+      if (e.key === "Enter") nextSlide()
+      if (e.key === "Escape") window.history.back()
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [])
 
   /**
-   * Collection of slides rendered in the presentation. Each slide contains unique 
+   * Collection of slides rendered in the presentation. Each slide contains unique
    * animations and statistics representing user data for the year.
    */
   const slides = [
     // Slide 0: Intro
-    <div key="intro" className="flex flex-col items-center justify-center h-auto my-auto py-8 text-center space-y-6 px-6 relative z-30">
+    <div
+      key="intro"
+      className="relative z-30 my-auto flex h-auto flex-col items-center justify-center space-y-6 px-6 py-8 text-center"
+    >
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
+        initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="w-24 h-24 rounded-full bg-(--color-violet-500)/20 flex items-center justify-center text-violet-300 shadow-[0_0_60px_rgba(157,77,255,0.4)]"
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="bg-surface border-border text-primary flex h-16 w-16 items-center justify-center rounded-xl border"
       >
-        <AutoAwesomeIcon sx={{ fontSize: 48 }} />
+        <span className="font-handwriting text-2xl select-none">vault</span>
       </motion.div>
-      <motion.h1 
+      <motion.h1
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.8 }}
-        className="text-5xl md:text-7xl font-display font-bold text-gradient-violet leading-tight"
+        transition={{ delay: 0.2, duration: 0.6 }}
+        className="font-display text-foreground text-4xl leading-tight font-semibold tracking-tight md:text-6xl"
       >
-        {data.year} <br/> Vault Wrapped
+        {data.year} <br />
+        <span className="text-primary font-normal">Vault Wrapped</span>
       </motion.h1>
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
-        className="text-xl text-lunar-300"
+        transition={{ delay: 0.5 }}
+        className="text-muted max-w-md font-sans text-base sm:text-lg"
       >
-        Let&apos;s look back at the worlds you explored.
+        A curated review of the books, movies, series, and dishes that shaped your year.
       </motion.p>
       <motion.button
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2 }}
+        transition={{ delay: 0.8 }}
         onClick={nextSlide}
-        className="relative mt-8 px-8 py-4 rounded-full bg-violet-600 hover:bg-(--color-violet-500) text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(157,77,255,0.3)] flex items-center gap-2 pointer-events-auto"
+        className="bg-primary hover:bg-primary-hover text-primary-fg pointer-events-auto relative mt-4 flex cursor-pointer items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold transition-all hover:scale-105 active:scale-95"
       >
-        Start <PlayArrowIcon />
+        Begin Review <PlayArrowIcon fontSize="small" />
       </motion.button>
     </div>,
 
     // Slide 1: Total Volume
-    <div key="volume" className="flex flex-col items-center justify-center h-auto my-auto py-8 text-center space-y-12 px-6">
-      <motion.h2 
+    <div
+      key="volume"
+      className="my-auto flex h-auto flex-col items-center justify-center space-y-8 px-6 py-8 text-center"
+    >
+      <motion.h2
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-5xl font-display font-bold text-lunar-50"
+        className="font-display text-foreground text-2xl font-semibold tracking-tight md:text-4xl"
       >
-        This year, you escaped reality <br/>
-        <span className="text-gradient-violet text-6xl md:text-8xl block mt-4">{data.totalFinished}</span> times.
+        Completed experiences this year: <br />
+        <span className="text-primary mt-3 block font-mono text-5xl font-semibold md:text-7xl">
+          {data.totalFinished}
+        </span>
       </motion.h2>
-      <div className="flex flex-wrap justify-center gap-4 md:gap-8 mt-8 w-full max-w-3xl">
+      <div className="mt-6 flex w-full max-w-2xl flex-wrap justify-center gap-3 md:gap-4">
         {[
-          { label: "Movies", count: data.moviesFinished, icon: <MovieIcon fontSize="large" />, color: "var(--color-violet-400)" },
-          { label: "Series", count: data.seriesFinished, icon: <TvIcon fontSize="large" />, color: "var(--color-starlight-400)" },
-          { label: "Books", count: data.booksFinished, icon: <MenuBookIcon fontSize="large" />, color: "var(--color-lunar-300)" },
-          { label: "Recipes", count: data.recipesFinished, icon: <RestaurantMenuIcon fontSize="large" />, color: "var(--color-blossom-500)" },
-        ].filter(i => i.count > 0).map((item, i) => (
-          <motion.div 
-            key={item.label}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.4 + (i * 0.2), type: "spring" }}
-            className="glass-card p-6 rounded-3xl border border-lunar-800 flex flex-col items-center flex-1 min-w-30"
-          >
-            <div style={{ color: item.color }} className="mb-2">{item.icon}</div>
-            <div className="text-3xl font-bold text-white">{item.count}</div>
-            <div className="text-sm text-lunar-500 uppercase tracking-wider font-semibold">{item.label}</div>
-          </motion.div>
-        ))}
+          { label: "Movies", count: data.moviesFinished, icon: <MovieIcon fontSize="small" /> },
+          { label: "Series", count: data.seriesFinished, icon: <TvIcon fontSize="small" /> },
+          { label: "Books", count: data.booksFinished, icon: <MenuBookIcon fontSize="small" /> },
+          {
+            label: "Recipes",
+            count: data.recipesFinished,
+            icon: <RestaurantMenuIcon fontSize="small" />,
+          },
+        ]
+          .filter((i) => i.count > 0)
+          .map((item, i) => (
+            <motion.div
+              key={item.label}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3 + i * 0.15 }}
+              className="bg-surface border-border flex min-w-28 flex-1 flex-col items-center rounded-xl border p-4 sm:p-5"
+            >
+              <div className="text-primary mb-1.5">{item.icon}</div>
+              <div className="text-foreground font-mono text-2xl font-semibold">{item.count}</div>
+              <div className="text-muted mt-0.5 font-mono text-xs tracking-wider uppercase">
+                {item.label}
+              </div>
+            </motion.div>
+          ))}
       </div>
     </div>,
 
     // Slide 2: Time Invested
-    <div key="time" className="flex flex-col items-center justify-center h-auto my-auto py-8 text-center space-y-10 px-6">
-      <motion.h2 
-        initial={{ opacity: 0, scale: 0.9 }}
+    <div
+      key="time"
+      className="my-auto flex h-auto flex-col items-center justify-center space-y-8 px-6 py-8 text-center"
+    >
+      <motion.h2
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="text-3xl md:text-5xl font-display font-bold text-lunar-50 leading-tight"
+        className="font-display text-foreground text-2xl leading-tight font-semibold tracking-tight md:text-4xl"
       >
-        That&apos;s a lot of time <br/> spent in other worlds.
+        Time dedicated to your catalog
       </motion.h2>
-      
-      <div className="w-full max-w-lg space-y-6 text-left relative z-30">
-        <motion.div 
-          initial={{ x: -50, opacity: 0 }}
+
+      <div className="relative z-30 w-full max-w-md space-y-3.5 text-left">
+        <motion.div
+          initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="glass-card p-6 rounded-3xl border border-(--color-violet-500)/30 bg-(--color-violet-500)/5 flex items-center gap-6"
+          transition={{ delay: 0.2 }}
+          className="bg-surface border-border flex items-center gap-4 rounded-xl border p-4 sm:p-5"
         >
-          <div className="w-16 h-16 rounded-full bg-(--color-violet-500)/20 flex items-center justify-center text-violet-400 shrink-0">
-            <AccessTimeIcon fontSize="large" />
+          <div className="bg-surface border-border text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
+            <AccessTimeIcon fontSize="small" />
           </div>
           <div>
-            <div className="text-4xl font-bold text-white">{data.moviesHours + data.seriesHours} <span className="text-xl text-lunar-400 font-normal">hours</span></div>
-            <div className="text-sm text-violet-300 mt-1">Watching movies & series</div>
+            <div className="text-foreground font-mono text-2xl font-semibold">
+              {data.moviesHours + data.seriesHours}{" "}
+              <span className="text-muted font-sans text-sm font-normal">hours</span>
+            </div>
+            <div className="text-muted mt-0.5 text-xs">Watched across movies & series</div>
           </div>
         </motion.div>
 
-        <motion.div 
-          initial={{ x: 50, opacity: 0 }}
+        <motion.div
+          initial={{ x: 20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="glass-card p-6 rounded-3xl border border-starlight-500/30 bg-starlight-500/5 flex items-center gap-6"
+          transition={{ delay: 0.4 }}
+          className="bg-surface border-border flex items-center gap-4 rounded-xl border p-4 sm:p-5"
         >
-          <div className="w-16 h-16 rounded-full bg-starlight-500/20 flex items-center justify-center text-starlight-400 shrink-0">
-            <MenuBookIcon fontSize="large" />
+          <div className="bg-surface border-border text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
+            <MenuBookIcon fontSize="small" />
           </div>
           <div>
-            <div className="text-4xl font-bold text-white">{data.booksPages.toLocaleString()} <span className="text-xl text-lunar-400 font-normal">pages</span></div>
-            <div className="text-sm text-(--color-starlight-300) mt-1">Read across all books</div>
+            <div className="text-foreground font-mono text-2xl font-semibold">
+              {data.booksPages.toLocaleString()}{" "}
+              <span className="text-muted font-sans text-sm font-normal">pages</span>
+            </div>
+            <div className="text-muted mt-0.5 text-xs">Read across literary discoveries</div>
           </div>
         </motion.div>
       </div>
     </div>,
 
     // Slide 3: Genres
-    <div key="genres" className="flex flex-col items-center justify-center h-auto my-auto py-8 text-center space-y-10 px-6">
-      <motion.h2 
-        initial={{ opacity: 0, y: 20 }}
+    <div
+      key="genres"
+      className="my-auto flex h-auto flex-col items-center justify-center space-y-6 px-6 py-8 text-center"
+    >
+      <motion.h2
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-5xl font-display font-bold text-lunar-50"
+        className="font-display text-foreground text-2xl font-semibold tracking-tight md:text-4xl"
       >
-        The vibe was definitely...
+        Top genres & categories
       </motion.h2>
-      <div className="w-full max-w-md space-y-4">
-        {data.topGenres.length > 0 ? data.topGenres.map((g, i) => (
-          <motion.div 
-            key={g.name}
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: "100%", opacity: 1 }}
-            transition={{ delay: 0.3 + (i * 0.15), duration: 0.6 }}
-            className="flex items-center justify-between p-4 rounded-2xl bg-lunar-800/50 border border-lunar-800 relative overflow-hidden"
-          >
-            <div 
-              className="absolute left-0 top-0 bottom-0 bg-(--color-violet-500)/20" 
-              style={{ width: `${(g.count / data.topGenres[0].count) * 100}%` }}
-            />
-            <span className="text-lg font-bold text-white z-10 truncate mr-3 flex-1 text-left">{g.name}</span>
-            <span className="text-sm font-semibold text-violet-300 z-10 whitespace-nowrap">{g.count} titles</span>
-          </motion.div>
-        )) : (
-          <p className="text-lunar-400">Not enough data yet. Read or watch more!</p>
+      <div className="w-full max-w-sm space-y-2.5">
+        {data.topGenres.length > 0 ? (
+          data.topGenres.map((g, i) => (
+            <motion.div
+              key={g.name}
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: "100%", opacity: 1 }}
+              transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
+              className="bg-surface border-border relative flex items-center justify-between overflow-hidden rounded-lg border p-3 text-left"
+            >
+              <div
+                className="bg-primary/10 absolute top-0 bottom-0 left-0"
+                style={{ width: `${(g.count / data.topGenres[0].count) * 100}%` }}
+              />
+              <span className="text-foreground z-10 mr-2 flex-1 truncate text-xs font-medium">
+                {g.name}
+              </span>
+              <span className="text-primary z-10 font-mono text-[11px] whitespace-nowrap">
+                {g.count} titles
+              </span>
+            </motion.div>
+          ))
+        ) : (
+          <p className="text-muted text-xs">Not enough data yet.</p>
         )}
       </div>
     </div>,
 
     // Slide 4: Top Items
-    <div key="favorites" className="flex flex-col items-center justify-center h-auto my-auto py-8 text-center space-y-6 px-4">
-      <motion.h2 
-        initial={{ opacity: 0, y: -20 }}
+    <div
+      key="favorites"
+      className="my-auto flex h-auto flex-col items-center justify-center space-y-5 px-4 py-8 text-center"
+    >
+      <motion.h2
+        initial={{ opacity: 0, y: -15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-5xl font-display font-bold text-lunar-50 leading-tight"
+        className="font-display text-foreground text-2xl leading-tight font-semibold tracking-tight md:text-4xl"
       >
-        The absolute best of the year.
+        Top discoveries of the year
       </motion.h2>
-      <p className="text-lunar-400 text-sm max-w-sm mx-auto">Highest rated discoveries.</p>
-      
-      <div className="grid grid-cols-3 gap-3 md:gap-6 mt-4 max-w-2xl w-full">
-        {data.topItems.length > 0 ? data.topItems.slice(0, 3).map((item, i) => (
-          <motion.div 
-            key={item.id}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 + (i * 0.1) }}
-            className="aspect-2/3 rounded-2xl overflow-hidden relative shadow-lg group"
-          >
-            {item.cover_url ? (
-              <Image src={item.cover_url} alt={item.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover" unoptimized />
-            ) : (
-              <div className="w-full h-full bg-lunar-800 flex items-center justify-center p-4 text-center">
-                <span className="text-sm font-bold opacity-50">{item.title}</span>
-              </div>
-            )}
-            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 opacity-100">
-              <span className="text-white font-bold text-sm truncate">{item.title}</span>
-              {item.user_rating && (
-                <span className="text-starlight-400 text-xs font-bold flex items-center gap-1 mt-1">
-                  <StarIcon sx={{ fontSize: 14 }} /> {item.user_rating}/5
-                </span>
+      <p className="text-muted mx-auto max-w-sm text-xs">Highest rated selections.</p>
+
+      <div className="mt-2 grid w-full max-w-xl grid-cols-3 gap-3">
+        {data.topItems.length > 0 ? (
+          data.topItems.slice(0, 3).map((item, i) => (
+            <motion.div
+              key={item.id}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.15 + i * 0.1 }}
+              className="border-border bg-surface group relative aspect-2/3 overflow-hidden rounded-xl border"
+            >
+              {item.cover_url ? (
+                <Image
+                  src={item.cover_url}
+                  alt={item.title}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 33vw"
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="bg-surface flex h-full w-full items-center justify-center p-3 text-center">
+                  <span className="text-muted text-xs font-semibold">{item.title}</span>
+                </div>
               )}
-            </div>
-          </motion.div>
-        )) : (
-          <p className="text-lunar-400 col-span-full">Rate some titles to see top picks!</p>
+              <div className="absolute inset-0 flex flex-col justify-end bg-linear-to-t from-black/80 via-black/20 to-transparent p-2.5 text-left">
+                <span className="truncate text-xs font-semibold text-white">{item.title}</span>
+                {item.user_rating && (
+                  <span className="text-primary mt-0.5 flex items-center gap-1 font-mono text-[11px]">
+                    <StarIcon sx={{ fontSize: 12 }} /> {item.user_rating}/5
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          ))
+        ) : (
+          <p className="text-muted col-span-full text-xs">Rate titles to highlight top picks.</p>
         )}
       </div>
     </div>,
 
     // Slide 5: Summary Card
-    <div key="summary" className="flex flex-col items-center justify-center h-auto my-auto py-8 text-center space-y-8 px-6">
-      <motion.h2 
+    <div
+      key="summary"
+      className="my-auto flex h-auto flex-col items-center justify-center space-y-6 px-6 py-8 text-center"
+    >
+      <motion.h2
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="text-4xl font-display font-bold text-white"
+        className="font-display text-foreground text-2xl font-semibold tracking-tight md:text-3xl"
       >
-        Ready for next year?
+        Your Year in Summary
       </motion.h2>
-      
-      <motion.div 
-        initial={{ y: 50, opacity: 0 }}
+
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="glass-card p-8 rounded-4xl border-2 border-(--color-violet-500) max-w-sm w-full bg-linear-to-b from-violet-900/40 to-(--color-lunar-950) text-left shadow-[0_0_50px_rgba(157,77,255,0.2)]"
+        transition={{ delay: 0.2 }}
+        className="bg-surface border-border w-full max-w-xs rounded-xl border p-6 text-left shadow-lg sm:p-7"
       >
-        <div className="flex items-center gap-2 mb-6 text-violet-300">
-          <AutoAwesomeIcon /> <span className="font-bold tracking-widest uppercase text-sm">Vault Wrapped {data.year}</span>
+        <div className="border-border mb-5 flex items-baseline justify-between border-b pb-3">
+          <span className="font-display text-foreground text-base font-semibold">
+            Vault Wrapped
+          </span>
+          <span className="text-primary font-mono text-xs">{data.year}</span>
         </div>
-        
-        <div className="space-y-4">
-          <div className="flex justify-between items-end border-b border-lunar-800 pb-2">
-            <span className="text-lunar-400 text-sm uppercase">Total Escapes</span>
-            <span className="text-2xl font-bold text-white">{data.totalFinished}</span>
+
+        <div className="space-y-3">
+          <div className="border-border-subtle flex items-baseline justify-between border-b pb-2">
+            <span className="text-muted text-xs">Total Finished</span>
+            <span className="text-foreground font-mono text-lg font-semibold">
+              {data.totalFinished}
+            </span>
           </div>
-          <div className="flex justify-between items-end border-b border-lunar-800 pb-2">
-            <span className="text-lunar-400 text-sm uppercase">Screen Time</span>
-            <span className="text-xl font-bold text-white">{data.moviesHours + data.seriesHours}h</span>
+          <div className="border-border-subtle flex items-baseline justify-between border-b pb-2">
+            <span className="text-muted text-xs">Screen Time</span>
+            <span className="text-foreground font-mono text-base font-semibold">
+              {data.moviesHours + data.seriesHours}h
+            </span>
           </div>
-          <div className="flex justify-between items-end border-b border-lunar-800 pb-2">
-            <span className="text-lunar-400 text-sm uppercase">Pages Read</span>
-            <span className="text-xl font-bold text-white">{data.booksPages.toLocaleString()}</span>
+          <div className="border-border-subtle flex items-baseline justify-between border-b pb-2">
+            <span className="text-muted text-xs">Pages Read</span>
+            <span className="text-foreground font-mono text-base font-semibold">
+              {data.booksPages.toLocaleString()}
+            </span>
           </div>
-          <div className="flex justify-between items-end pt-2">
-            <span className="text-lunar-400 text-sm uppercase whitespace-nowrap">Top Vibe</span>
-            <span className="text-lg font-bold text-violet-400 truncate ml-4 text-right">{data.topGenres[0]?.name || "Unknown"}</span>
+          <div className="flex items-baseline justify-between pt-1">
+            <span className="text-muted text-xs">Top Genre</span>
+            <span className="text-primary ml-3 truncate text-right text-xs font-semibold">
+              {data.topGenres[0]?.name || "None"}
+            </span>
           </div>
         </div>
       </motion.div>
-    </div>
-  ];
+    </div>,
+  ]
 
   return (
-    <div className="fixed inset-0 z-50 bg-(--color-lunar-950) flex flex-col overflow-hidden">
-      {/* Background ambient glows */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-(--color-violet-500)/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-starlight-500/10 blur-[150px] rounded-full" />
-      </div>
-
+    <div className="bg-background fixed inset-0 z-50 flex flex-col overflow-hidden">
       {/* Progress Bars */}
-      <div className="absolute top-4 left-4 right-4 z-50 flex gap-2">
+      <div className="absolute top-4 right-4 left-4 z-50 flex gap-1.5">
         {slides.map((_, i) => (
-          <div key={i} className="h-1.5 flex-1 bg-lunar-800 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-violet-400 transition-all duration-300"
-              style={{ width: i <= currentSlide ? '100%' : '0%' }}
+          <div
+            key={i}
+            className="bg-surface border-border h-1 flex-1 overflow-hidden rounded-full border"
+          >
+            <div
+              className="bg-primary h-full transition-all duration-300"
+              style={{ width: i <= currentSlide ? "100%" : "0%" }}
             />
           </div>
         ))}
       </div>
 
       {/* Slides Container */}
-      <div className="flex-1 relative z-10 flex items-center justify-center overflow-y-auto overflow-x-hidden pt-12 pb-12">
+      <div className="relative z-10 flex flex-1 items-center justify-center overflow-x-hidden overflow-y-auto pt-12 pb-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.4 }}
-            className="w-full min-h-full pointer-events-none flex flex-col justify-center"
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.3 }}
+            className="pointer-events-none flex min-h-full w-full flex-col justify-center"
           >
             {slides[currentSlide]}
           </motion.div>
@@ -333,17 +390,25 @@ export function WrappedPresentation({ data }: Props) {
 
       {/* Navigation Areas (Left/Right Tap) */}
       <div className="absolute inset-0 z-20 flex pt-12">
-        <button className="flex-1 h-full cursor-w-resize focus:outline-none focus-visible:bg-white/5" onClick={prevSlide} aria-label="Previous slide" />
-        <button className="flex-2 h-full cursor-e-resize focus:outline-none focus-visible:bg-white/5" onClick={nextSlide} aria-label="Next slide" />
+        <button
+          className="h-full flex-1 cursor-w-resize focus:outline-none focus-visible:bg-black/5 dark:focus-visible:bg-white/5"
+          onClick={prevSlide}
+          aria-label="Previous slide"
+        />
+        <button
+          className="h-full flex-2 cursor-e-resize focus:outline-none focus-visible:bg-black/5 dark:focus-visible:bg-white/5"
+          onClick={nextSlide}
+          aria-label="Next slide"
+        />
       </div>
 
       {/* Exit Button */}
-      <button 
+      <button
         onClick={() => window.history.back()}
-        className="absolute top-8 right-6 z-50 text-lunar-400 hover:text-white font-bold tracking-wider text-sm uppercase cursor-pointer pointer-events-auto"
+        className="text-muted hover:text-foreground bg-surface border-border hover:bg-surface-hover pointer-events-auto absolute top-7 right-6 z-50 cursor-pointer rounded border px-2.5 py-1 font-mono text-xs uppercase transition-colors"
       >
-        Close
+        Close (Esc)
       </button>
     </div>
-  );
+  )
 }
