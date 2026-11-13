@@ -62,3 +62,6 @@ next-env.d.ts
 
 # Documentation
 /docs
+
+# Agents
+.agents/
