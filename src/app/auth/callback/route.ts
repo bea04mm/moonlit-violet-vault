@@ -1,11 +1,11 @@
 /**
  * Supabase OAuth callback route.
- * 
+ *
  * @packageDocumentation
  */
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
+import { NextResponse, type NextRequest } from "next/server"
 
 /**
  * Handles the OAuth callback from Supabase.
@@ -13,25 +13,25 @@ import { NextResponse, type NextRequest } from "next/server";
  * @param request The incoming HTTP request containing the code and next URL parameters.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = new URL(request.url)
   /**
    * The OAuth authorization code returned by Supabase to exchange for a session.
    */
-  const code = searchParams.get("code");
+  const code = searchParams.get("code")
   /**
    * The unvalidated redirect path provided via the 'next' search parameter, defaulting to root.
    */
-  const rawNext = searchParams.get("next") ?? "/";
+  const rawNext = searchParams.get("next") ?? "/"
   /**
    * The sanitized redirect path ensuring it's a relative path and not an external URL.
    */
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/"
 
   if (code) {
     /**
      * A read-write interface to the incoming request cookies and outgoing response cookies.
      */
-    const cookieStore = await cookies();
+    const cookieStore = await cookies()
     /**
      * The Supabase server client configured with cookies for SSR operations.
      */
@@ -41,24 +41,24 @@ export async function GET(request: NextRequest) {
       {
         cookies: {
           getAll() {
-            return cookieStore.getAll();
+            return cookieStore.getAll()
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
-            );
+            )
           },
         },
       }
-    );
+    )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      return NextResponse.redirect(new URL(next, request.url));
+      return NextResponse.redirect(new URL(next, request.url))
     }
   }
 
   // If code exchange fails, redirect to login with error
-  return NextResponse.redirect(new URL("/login?error=auth_failed", request.url));
+  return NextResponse.redirect(new URL("/login?error=auth_failed", request.url))
 }

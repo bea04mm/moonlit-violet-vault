@@ -1,53 +1,53 @@
 /**
  * Recipe detail page — same pattern as movies; validates type=recipe.
- * 
+ *
  * @packageDocumentation
  */
-import { notFound } from "next/navigation";
-import { getMediaItem } from "@/lib/services/mediaService";
-import { MediaDetail } from "@/components/media/MediaDetail";
-import type { Metadata } from "next";
+import { notFound } from "next/navigation"
+import { getMediaItem } from "@/lib/services/mediaService"
+import { MediaDetail } from "@/components/media/MediaDetail"
+import type { Metadata } from "next"
 
 /**
  * Properties for the RecipeDetailPage and generateMetadata functions, containing dynamic route parameters.
  */
 export interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>
 }
 
 /**
  * Generates dynamic metadata for the recipe detail page by fetching the recipe's title and synopsis.
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
+  const { id } = await params
   /**
    * The media item fetched by its unique identifier.
    */
-  const item = await getMediaItem(id);
-  
+  const item = await getMediaItem(id)
+
   if (!item || item.type !== "recipe") {
-    return { title: "Not Found · Moonlit Violet Vault" };
+    return { title: "Not Found · Moonlit Violet Vault" }
   }
-  
+
   return {
     title: `${item.title} · Recipe · Moonlit Violet Vault`,
     description: item.synopsis ?? `Details about ${item.title}`,
-  };
+  }
 }
 
 /**
  * Renders the Recipe detail page by fetching the item and displaying it using the MediaDetail component.
  */
 export default async function RecipeDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id } = await params
   /**
    * The media item fetched by its unique identifier.
    */
-  const item = await getMediaItem(id);
+  const item = await getMediaItem(id)
 
   if (!item || item.type !== "recipe") {
-    notFound();
+    notFound()
   }
 
-  return <MediaDetail item={item} />;
+  return <MediaDetail item={item} />
 }

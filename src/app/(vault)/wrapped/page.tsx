@@ -1,12 +1,12 @@
 /**
  * Vault Wrapped page — reads the ?year= query param, fetches annual stats,
  * and renders the WrappedPresentation full-screen slideshow.
- * 
+ *
  * @packageDocumentation
  */
-import { getVaultWrappedStats } from "@/lib/services/mediaService";
-import { WrappedPresentation } from "@/components/analytics/WrappedPresentation";
-import type { Metadata } from "next";
+import { getVaultWrappedStats } from "@/lib/services/mediaService"
+import { WrappedPresentation } from "@/components/analytics/WrappedPresentation"
+import type { Metadata } from "next"
 
 /**
  * Metadata configuration for the Vault Wrapped page.
@@ -14,7 +14,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Vault Wrapped",
   description: "Year in review.",
-};
+}
 
 /**
  * Renders the Vault Wrapped dashboard for a given year, processing query parameters and fetching annual statistics.
@@ -27,20 +27,20 @@ export default async function WrappedPage({
   /**
    * Awaited URL search parameters.
    */
-  const params = await searchParams;
+  const params = await searchParams
   /**
    * Extracted year string from query parameters.
    */
-  const yearParam = params.year as string;
+  const yearParam = params.year as string
   /**
    * The parsed year integer to compute stats for, defaulting to the current year.
    */
-  const year = yearParam ? parseInt(yearParam) : new Date().getFullYear();
-  
+  const year = yearParam ? parseInt(yearParam) : new Date().getFullYear()
+
   /**
    * Aggregated media statistics for the specified year.
    */
-  const data = await getVaultWrappedStats(year);
+  const data = await getVaultWrappedStats(year)
 
-  return <WrappedPresentation data={data} />;
+  return <WrappedPresentation data={data} />
 }

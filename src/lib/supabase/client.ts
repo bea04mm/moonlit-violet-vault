@@ -5,13 +5,13 @@
  *
  * Usage: import { createClient } from "@/lib/supabase/client"
  * Only use this in files marked "use client" — for server-side, use server.ts.
- * 
+ *
  * @packageDocumentation
  */
-"use client";
+"use client"
 
-import { createBrowserClient } from "@supabase/ssr";
-import type { Database } from "./database.types";
+import { createBrowserClient } from "@supabase/ssr"
+import type { Database } from "./database.types"
 
 /**
  * Returns a Supabase client configured for the browser environment.
@@ -22,5 +22,5 @@ export function createClient() {
   return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  )
 }
