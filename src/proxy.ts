@@ -9,16 +9,16 @@
  *  4. Enforces the ALLOWED_EMAIL whitelist — only one user may access the vault.
  *  5. Redirects unauthenticated / unauthorised users to /login.
  *  6. Redirects already-logged-in users away from /login to the dashboard.
- * 
+ *
  * @packageDocumentation
  */
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
 
 /**
  * Array of route prefixes that bypass authentication and are publicly accessible.
  */
-const PUBLIC_PATHS = ["/login", "/auth"];
+const PUBLIC_PATHS = ["/login", "/auth", "/api/cron/sync-series", "/api/icon"]
 
 /**
  * Proxy middleware for handling authentication and authorization.
@@ -27,33 +27,33 @@ const PUBLIC_PATHS = ["/login", "/auth"];
  */
 export default async function proxy(request: NextRequest) {
   // If Supabase env vars are not configured yet, let through to login page
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   /**
    * The public Supabase anonymous key from environment variables.
    */
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  const { pathname } = request.nextUrl;
+  const { pathname } = request.nextUrl
   /**
    * Boolean flag indicating whether the current request path matches any configured public paths.
    */
-  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
 
   if (!supabaseUrl || !supabaseKey) {
     // Env not configured — allow login page, block everything else
     if (!isPublicPath) {
       // Redirect to login if trying to access protected routes without config
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      return NextResponse.redirect(loginUrl);
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = "/login"
+      return NextResponse.redirect(loginUrl)
     }
-    return NextResponse.next();
+    return NextResponse.next()
   }
 
   /**
    * The initial Next.js response that will be modified to include refreshed session cookies.
    */
-  let supabaseResponse = NextResponse.next({ request });
+  let supabaseResponse = NextResponse.next({ request })
 
   /**
    * The Supabase server client instance for interacting with auth and modifying cookies.
@@ -61,62 +61,63 @@ export default async function proxy(request: NextRequest) {
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
-        return request.cookies.getAll();
+        return request.cookies.getAll()
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
-        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        supabaseResponse = NextResponse.next({ request })
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options)
-        );
+        )
       },
     },
-  });
+  })
 
   // Refresh session — do NOT remove this call
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (!user && !isPublicPath) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    // Block access to protected routes for unauthenticated users
     /**
      * Constructed URL for redirecting unauthenticated users to the login screen.
      */
-    // Block access to protected routes for unauthenticated users
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    return NextResponse.redirect(loginUrl);
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = "/login"
+    return NextResponse.redirect(loginUrl)
   }
 
   if (user) {
     // Enforce single-user access via email whitelist
-    const allowedEmail = process.env.ALLOWED_EMAIL;
+    const allowedEmail = process.env.ALLOWED_EMAIL
     if (allowedEmail && user.email !== allowedEmail) {
       // Sign out unauthorized users and redirect with an error param
-      await supabase.auth.signOut();
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      loginUrl.searchParams.set("error", "unauthorized");
-      const redirectRes = NextResponse.redirect(loginUrl);
+      await supabase.auth.signOut()
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = "/login"
+      loginUrl.searchParams.set("error", "unauthorized")
+      const redirectRes = NextResponse.redirect(loginUrl)
       // Copy cookie-clearing headers from supabaseResponse to the redirect
-      supabaseResponse.cookies.getAll().forEach((cookie) =>
-        redirectRes.cookies.set(cookie.name, cookie.value, cookie)
-      );
-      return redirectRes;
+      supabaseResponse.cookies
+        .getAll()
+        .forEach((cookie) => redirectRes.cookies.set(cookie.name, cookie.value, cookie))
+      return redirectRes
     }
 
     // Already authenticated — redirect away from login page
     if (pathname === "/login") {
       // Send authenticated users to the dashboard
-      const homeUrl = request.nextUrl.clone();
-      homeUrl.pathname = "/";
-      return NextResponse.redirect(homeUrl);
+      const homeUrl = request.nextUrl.clone()
+      homeUrl.pathname = "/"
+      return NextResponse.redirect(homeUrl)
     }
   }
 
-  return supabaseResponse;
+  return supabaseResponse
 }
 
 /**
@@ -127,4 +128,4 @@ export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-};
+}

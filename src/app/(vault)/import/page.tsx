@@ -1,27 +1,27 @@
 /**
  * Import page for adding bulk media via Goodreads CSV or AI Book Spine Scanner.
- * 
+ *
  * @packageDocumentation
  */
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import Papa from "papaparse";
-import { Button } from "@mui/material";
-import { importGoodreadsBatch } from "@/lib/actions/importActions";
-import { extractTitlesFromImage } from "@/lib/actions/ocrActions";
-import { toast } from "sonner";
-import FileUploadIcon from "@mui/icons-material/FileUpload";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { useState, useEffect } from "react"
+import Papa from "papaparse"
+import { importGoodreadsBatch } from "@/lib/actions/importActions"
+import { extractTitlesFromImage } from "@/lib/actions/ocrActions"
+import { toast } from "sonner"
+import { PageHeader } from "@/components/layout/PageHeader"
+import FileUploadIcon from "@mui/icons-material/FileUpload"
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera"
+import WarningAmberIcon from "@mui/icons-material/WarningAmber"
 
 /**
- * Renders the Import page, providing drag-and-drop zones and file upload inputs for 
+ * Renders the Import page, providing drag-and-drop zones and file upload inputs for
  * AI image spine scanning and Goodreads CSV imports.
  */
 export default function ImportPage() {
-  const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
     /**
@@ -29,93 +29,103 @@ export default function ImportPage() {
      */
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isUploading) {
-        e.preventDefault();
-        e.returnValue = "";
+        e.preventDefault()
+        e.returnValue = ""
       }
-    };
+    }
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isUploading]);
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isUploading])
 
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [extractedTitles, setExtractedTitles] = useState<Array<{title: string, type: string, status?: string}>>([]);
-  const [isDraggingImage, setIsDraggingImage] = useState(false);
-  const [isDraggingCSV, setIsDraggingCSV] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [extractedTitles, setExtractedTitles] = useState<
+    Array<{ title: string; type: string; status?: string }>
+  >([])
+  const [isDraggingImage, setIsDraggingImage] = useState(false)
+  const [isDraggingCSV, setIsDraggingCSV] = useState(false)
 
   /**
    * Reads an uploaded image file, converts it to base64, and triggers the AI extraction process.
    */
   const processImage = async (file: File) => {
-    setIsExtracting(true);
-    setExtractedTitles([]);
+    setIsExtracting(true)
+    setExtractedTitles([])
 
     /**
      * FileReader instance used to convert the selected image into a Data URL.
      */
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = async () => {
       try {
-        const base64 = reader.result as string;
-        
+        const base64 = reader.result as string
+
         if (base64.length > 4_000_000) {
-          toast.error("Image is too large (max ~3MB). Please crop or compress it.");
-          setIsExtracting(false);
-          return;
+          toast.error("Image is too large (max ~3MB). Please crop or compress it.")
+          setIsExtracting(false)
+          return
         }
 
-        const formData = new FormData();
-        formData.append("image", base64);
-        formData.append("mimeType", file.type);
-        formData.append("mediaType", "movie, series, book, or recipe");
+        const formData = new FormData()
+        formData.append("image", base64)
+        formData.append("mimeType", file.type)
+        formData.append("mediaType", "movie, series, book, or recipe")
 
-        const res = await extractTitlesFromImage(formData);
-        
+        const res = await extractTitlesFromImage(formData)
+
         if (res.success && res.titles) {
           // Initialize list with pending status
-          const items = res.titles.map((t) => ({ 
+          const items = res.titles.map((t) => ({
             ...t,
-            title: t.title || "", 
-            type: t.type || "movie", 
-            status: "pending" 
-          }));
-          setExtractedTitles(items);
-          toast.success(`Extracted ${items.length} items. Ingesting...`);
-          
+            title: t.title || "",
+            type: t.type || "movie",
+            status: "pending",
+          }))
+          setExtractedTitles(items)
+          toast.success(`Extracted ${items.length} items. Ingesting...`)
+
           // Auto ingest sequentially
           for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "loading" } : p));
-            
+            const item = items[i]
+            setExtractedTitles((prev) =>
+              prev.map((p, idx) => (idx === i ? { ...p, status: "loading" } : p))
+            )
+
             try {
-              const { ingestExtractedTitle } = await import("@/lib/actions/ocrActions");
-              const ingestRes = await ingestExtractedTitle(item);
+              const { ingestExtractedTitle } = await import("@/lib/actions/ocrActions")
+              const ingestRes = await ingestExtractedTitle(item)
               if (ingestRes.success) {
-                setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "success" } : p));
+                setExtractedTitles((prev) =>
+                  prev.map((p, idx) => (idx === i ? { ...p, status: "success" } : p))
+                )
               } else {
-                setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "failed" } : p));
+                setExtractedTitles((prev) =>
+                  prev.map((p, idx) => (idx === i ? { ...p, status: "failed" } : p))
+                )
               }
             } catch {
-              setExtractedTitles(prev => prev.map((p, idx) => idx === i ? { ...p, status: "failed" } : p));
+              setExtractedTitles((prev) =>
+                prev.map((p, idx) => (idx === i ? { ...p, status: "failed" } : p))
+              )
             }
           }
-          toast.success("Ingestion complete!");
+          toast.success("Ingestion complete!")
         } else {
-          toast.error(res.error || "Failed to extract titles");
+          toast.error(res.error || "Failed to extract titles")
         }
       } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error";
-        toast.error("Server error: " + errorMsg);
+        const errorMsg = err instanceof Error ? err.message : "Unknown error"
+        toast.error("Server error: " + errorMsg)
       } finally {
-        setIsExtracting(false);
+        setIsExtracting(false)
       }
-    };
+    }
     reader.onerror = () => {
-      toast.error("Failed to read image file");
-      setIsExtracting(false);
-    };
-    reader.readAsDataURL(file);
-  };
+      toast.error("Failed to read image file")
+      setIsExtracting(false)
+    }
+    reader.readAsDataURL(file)
+  }
 
   /**
    * Handles the file input change event for image uploads.
@@ -124,81 +134,83 @@ export default function ImportPage() {
     /**
      * Declaration for file.
      */
-    const file = e.target.files?.[0];
-    if (file) processImage(file);
-  };
+    const file = e.target.files?.[0]
+    if (file) processImage(file)
+  }
 
   /**
    * Parses and processes an uploaded Goodreads CSV file, importing valid books in batches.
    */
   const processCSV = (file: File) => {
-    setIsUploading(true);
-    setProgress(0);
+    setIsUploading(true)
+    setProgress(0)
 
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const rows = results.data as Record<string, string>[];
-        
-        const items = rows.map((row) => {
-          const rawRating = parseFloat(row["My Rating"] || "0");
-          const userRating = rawRating > 0 ? rawRating * 2 : undefined;
-          const yearRaw = parseInt(row["Original Publication Year"] || "0", 10);
-          const releaseYear = yearRaw > 0 ? yearRaw : undefined;
-          
-          let status: "read" | "reading" | "want_to_read" = "want_to_read";
-          const shelf = row["Exclusive Shelf"] || "";
-          if (shelf === "read") status = "read";
-          if (shelf === "currently-reading") status = "reading";
-          
-          const isbnRaw = String(row["ISBN13"] || row["ISBN"] || "").replace(/[^0-9X]/g, "");
-          const isbn = isbnRaw.length > 0 ? isbnRaw : undefined;
+        const rows = results.data as Record<string, string>[]
 
-          const totalPagesRaw = parseInt(row["Number of Pages"] || "0", 10);
-          const totalPages = totalPagesRaw > 0 ? totalPagesRaw : undefined;
-          const pagesRead = status === "read" && totalPages ? totalPages : 0;
+        const items = rows
+          .map((row) => {
+            const rawRating = parseFloat(row["My Rating"] || "0")
+            const userRating = rawRating > 0 ? rawRating : undefined
+            const yearRaw = parseInt(row["Original Publication Year"] || "0", 10)
+            const releaseYear = yearRaw > 0 ? yearRaw : undefined
 
-          return {
-            type: "book" as const,
-            title: row["Title"]?.trim(),
-            author: row["Author"]?.trim() || undefined,
-            isbn,
-            status,
-            user_rating: userRating,
-            release_year: releaseYear,
-            total_pages: totalPages,
-            pages_read: pagesRead,
-            date_completed: row["Date Read"] || undefined,
-            date_added: row["Date Added"] || undefined,
-            ingestion_source: "goodreads_csv" as const,
-          };
-        }).filter(item => item.title);
+            let status: "read" | "reading" | "want_to_read" = "want_to_read"
+            const shelf = row["Exclusive Shelf"] || ""
+            if (shelf === "read") status = "read"
+            if (shelf === "currently-reading") status = "reading"
 
-        toast.info(`Found ${items.length} books in CSV. Importing in batches...`);
+            const isbnRaw = String(row["ISBN13"] || row["ISBN"] || "").replace(/[^0-9X]/g, "")
+            const isbn = isbnRaw.length > 0 ? isbnRaw : undefined
 
-        const BATCH_SIZE = 10;
-        let totalInserted = 0;
+            const totalPagesRaw = parseInt(row["Number of Pages"] || "0", 10)
+            const totalPages = totalPagesRaw > 0 ? totalPagesRaw : undefined
+            const pagesRead = status === "read" && totalPages ? totalPages : 0
+
+            return {
+              type: "book" as const,
+              title: row["Title"]?.trim(),
+              author: row["Author"]?.trim() || undefined,
+              isbn,
+              status,
+              user_rating: userRating,
+              release_year: releaseYear,
+              total_pages: totalPages,
+              pages_read: pagesRead,
+              date_completed: row["Date Read"] || undefined,
+              date_added: row["Date Added"] || undefined,
+              ingestion_source: "goodreads_csv" as const,
+            }
+          })
+          .filter((item) => item.title)
+
+        toast.info(`Found ${items.length} books in CSV. Importing in batches...`)
+
+        const BATCH_SIZE = 10
+        let totalInserted = 0
 
         for (let i = 0; i < items.length; i += BATCH_SIZE) {
-          const batch = items.slice(i, i + BATCH_SIZE);
-          const res = await importGoodreadsBatch(batch);
+          const batch = items.slice(i, i + BATCH_SIZE)
+          const res = await importGoodreadsBatch(batch)
           if (res.success && res.inserted) {
-            totalInserted += res.inserted;
+            totalInserted += res.inserted
           }
-          setProgress(Math.round(((i + batch.length) / items.length) * 100));
+          setProgress(Math.round(((i + batch.length) / items.length) * 100))
         }
 
-        setIsUploading(false);
-        toast.success(`Import complete! Inserted ${totalInserted} new books.`);
+        setIsUploading(false)
+        toast.success(`Import complete! Inserted ${totalInserted} new books.`)
       },
       error: (err) => {
-        console.error(err);
-        toast.error("Failed to parse CSV");
-        setIsUploading(false);
-      }
-    });
-  };
+        console.error(err)
+        toast.error("Failed to parse CSV")
+        setIsUploading(false)
+      },
+    })
+  }
 
   /**
    * Declaration for handleFileUpload.
@@ -207,256 +219,261 @@ export default function ImportPage() {
     /**
      * Declaration for file.
      */
-    const file = e.target.files?.[0];
-    if (file) processCSV(file);
-  };
+    const file = e.target.files?.[0]
+    if (file) processCSV(file)
+  }
 
   /**
    * Declaration for handleDragOver.
    */
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+    e.preventDefault()
+    e.stopPropagation()
+  }
 
   /**
    * Declaration for handleDragEnterImage.
    */
   const handleDragEnterImage = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingImage(true);
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingImage(true)
+  }
 
   /**
    * Declaration for handleDragLeaveImage.
    */
   const handleDragLeaveImage = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingImage(false);
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingImage(false)
+  }
 
   /**
    * Declaration for handleDragEnterCSV.
    */
   const handleDragEnterCSV = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingCSV(true);
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingCSV(true)
+  }
 
   /**
    * Declaration for handleDragLeaveCSV.
    */
   const handleDragLeaveCSV = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingCSV(false);
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingCSV(false)
+  }
 
   /**
    * Declaration for handleImageDrop.
    */
   const handleImageDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingImage(false);
-    
-    if (isExtracting) return;
-    
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingImage(false)
+
+    if (isExtracting) return
+
     /**
      * Declaration for file.
      */
-    const file = e.dataTransfer.files?.[0];
+    const file = e.dataTransfer.files?.[0]
     if (file && file.type.startsWith("image/")) {
-      processImage(file);
+      processImage(file)
     } else if (file) {
-      toast.error("Please drop an image file");
+      toast.error("Please drop an image file")
     }
-  };
+  }
 
   /**
    * Declaration for handleCSVDrop.
    */
   const handleCSVDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingCSV(false);
-    
-    if (isUploading) return;
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingCSV(false)
+
+    if (isUploading) return
 
     /**
      * Declaration for file.
      */
-    const file = e.dataTransfer.files?.[0];
+    const file = e.dataTransfer.files?.[0]
     if (file && (file.type === "text/csv" || file.name.endsWith(".csv"))) {
-      processCSV(file);
+      processCSV(file)
     } else if (file) {
-      toast.error("Please drop a CSV file");
+      toast.error("Please drop a CSV file")
     }
-  };
+  }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <FileUploadIcon fontSize="large" sx={{ color: "var(--color-violet-400)" }} />
-          <h1
-            className="text-4xl font-display font-bold text-gradient-violet"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Import Data
-          </h1>
-        </div>
-        <p className="text-sm" style={{ color: "var(--color-lunar-500)" }}>
-          Bring existing libraries into the Vault.
-        </p>
-      </div>
+    <div className="animate-fade-in space-y-6">
+      <PageHeader
+        title="Import Data"
+        accent="library sync"
+        description="Bring existing book and media libraries into the Vault."
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Screenshot OCR */}
-        <div 
-          className={`relative overflow-hidden glass-card p-8 lg:p-12 rounded-3xl border-2 flex flex-col items-center justify-center gap-4 text-center transition-all duration-300 ease-out bg-(--color-lunar-950)/50
-            ${isDraggingImage 
-              ? "border-solid border-violet-400 shadow-[0_0_40px_rgba(167,139,250,0.3)] bg-violet-900/20 scale-[1.03] -translate-y-2 z-10 *:pointer-events-none" 
-              : "border-dashed border-lunar-800 hover:border-(--color-violet-500) hover:bg-(--color-lunar-900)/40"
-            }`}
+        <div
+          className={`bg-surface shadow-card hover:shadow-card-hover relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border-2 p-6 text-center transition-all duration-300 sm:p-8 ${
+            isDraggingImage
+              ? "border-primary bg-primary/10 scale-[1.01] border-solid shadow-md"
+              : "border-border hover:border-primary/60 hover:bg-surface-hover border-dashed"
+          }`}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnterImage}
           onDragLeave={handleDragLeaveImage}
           onDrop={handleImageDrop}
         >
-          {isDraggingImage && (
-            <div className="absolute inset-0 bg-linear-to-t from-(--color-violet-500)/10 to-transparent animate-pulse pointer-events-none" />
-          )}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-violet-400 mb-2 transition-all duration-300 ${isDraggingImage ? "bg-(--color-violet-500)/30 scale-125" : "bg-(--color-violet-500)/10"}`}>
-            <PhotoCameraIcon sx={{ fontSize: 32 }} />
+          <div className="text-primary bg-primary/10 border-primary/20 mb-1 flex h-12 w-12 items-center justify-center rounded-xl border">
+            <PhotoCameraIcon sx={{ fontSize: 24 }} />
           </div>
-          <h2 className={`text-xl font-bold transition-colors ${isDraggingImage ? "text-violet-300" : "text-lunar-50"}`}>Magic AI Scanner</h2>
-          <p className="text-sm text-lunar-400 max-w-sm">
-            Drop a screenshot of a movie list, or a photo of a recipe book. AI will extract and save it automatically.
+          <h2 className="text-foreground text-base font-semibold">Image Spine Scanner</h2>
+          <p className="text-muted max-w-sm text-xs">
+            Drop a screenshot of a movie list, or a photo of a bookshelf or recipe. Titles will be
+            extracted and saved.
           </p>
-          
-          <div className="mt-4 flex items-center justify-center gap-3">
-            <Button 
-              component="label"
-              variant="contained" 
-              disabled={isExtracting}
-              sx={{ bgcolor: "var(--color-violet-600)", '&:hover': { bgcolor: "var(--color-violet-500)" }, color: "white", borderRadius: '999px', textTransform: 'none', px: 4, fontWeight: 'bold' }}
+
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <label
+              className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-semibold transition-all duration-200 select-none ${
+                isExtracting
+                  ? "bg-surface-elevated text-muted border-border cursor-not-allowed border opacity-60"
+                  : "bg-primary hover:bg-primary-hover dark:text-primary-fg shadow-card hover:shadow-card-hover border-primary/30 border text-white active:scale-95"
+              }`}
             >
-              {isExtracting ? "Extracting..." : "Upload Image"}
+              <PhotoCameraIcon sx={{ fontSize: 16, color: "#ffffff" }} className="text-white" />
+              <span>{isExtracting ? "Extracting..." : "Upload Image"}</span>
               <input
                 type="file"
                 hidden
                 accept="image/*"
+                disabled={isExtracting}
                 onChange={handleImageUpload}
               />
-            </Button>
-            
-            <Button 
-              component="label"
-              variant="outlined" 
-              disabled={isExtracting}
-              sx={{ 
-                display: { xs: 'flex', md: 'none' }, // Only show on mobile
-                borderColor: "var(--color-violet-600)", 
-                color: "var(--color-violet-400)", 
-                '&:hover': { borderColor: "var(--color-violet-400)", bgcolor: "rgba(167, 139, 250, 0.1)" }, 
-                borderRadius: '999px', 
-                minWidth: '48px', 
-                width: '48px', 
-                height: '48px', 
-                p: 0 
-              }}
+            </label>
+
+            <label
+              className={`inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-xs font-semibold transition-all select-none md:hidden ${
+                isExtracting
+                  ? "bg-surface-elevated text-muted border-border cursor-not-allowed border opacity-60"
+                  : "bg-surface hover:bg-surface-elevated border-border hover:border-primary/50 text-foreground hover:text-primary border shadow-xs active:scale-95"
+              }`}
               title="Take Photo"
               aria-label="Take Photo"
             >
-              <PhotoCameraIcon />
+              <PhotoCameraIcon fontSize="small" className="text-primary" />
               <input
                 type="file"
                 hidden
                 accept="image/*"
                 capture="environment"
+                disabled={isExtracting}
                 onChange={handleImageUpload}
               />
-            </Button>
+            </label>
           </div>
-          
+
           {extractedTitles.length > 0 && (
-            <div className="w-full max-w-xs mt-4 text-left">
-              <p className="text-xs text-violet-400 font-bold uppercase mb-2">Ingesting Titles</p>
-              <ul className="text-sm text-white bg-(--color-lunar-900) p-3 rounded-xl border border-lunar-800 max-h-32 overflow-y-auto">
+            <div className="mt-3 w-full max-w-xs text-left">
+              <p className="text-primary mb-1.5 font-mono text-[11px] font-semibold tracking-wider uppercase">
+                Ingesting Titles
+              </p>
+              <ul className="text-foreground bg-surface-elevated border-border divide-border max-h-32 divide-y overflow-y-auto rounded-lg border p-2.5 text-xs">
                 {extractedTitles.map((t, i) => (
-                  <li key={i} className="mb-2 last:mb-0 border-b border-lunar-800 last:border-0 pb-2 last:pb-0 flex items-center justify-between">
+                  <li
+                    key={i}
+                    className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0"
+                  >
                     <span className="truncate pr-2">{t.title}</span>
-                    {t.status === "pending" && <span className="text-lunar-500 text-xs">Waiting...</span>}
-                    {t.status === "loading" && <span className="text-violet-400 text-xs animate-pulse">Searching...</span>}
-                    {t.status === "success" && <span className="text-green-400 text-xs font-bold">Added</span>}
-                    {t.status === "failed" && <span className="text-red-400 text-xs font-bold">Failed</span>}
+                    {t.status === "pending" && (
+                      <span className="text-muted text-[10px]">Waiting...</span>
+                    )}
+                    {t.status === "loading" && (
+                      <span className="text-primary animate-pulse text-[10px]">Searching...</span>
+                    )}
+                    {t.status === "success" && (
+                      <span className="text-[10px] font-semibold text-emerald-500 dark:text-emerald-400">
+                        Added
+                      </span>
+                    )}
+                    {t.status === "failed" && (
+                      <span className="text-[10px] font-semibold text-rose-500 dark:text-rose-400">
+                        Failed
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-lunar-500 mt-2 italic text-center">Items are automatically searched and saved to the vault.</p>
             </div>
           )}
         </div>
 
         {/* Goodreads CSV */}
-        <div 
-          className={`relative overflow-hidden glass-card p-8 lg:p-12 rounded-3xl border-2 flex flex-col items-center justify-center gap-4 text-center transition-all duration-300 ease-out bg-(--color-lunar-950)/50
-            ${isDraggingCSV 
-              ? "border-solid border-blossom-400 shadow-[0_0_40px_rgba(240,78,150,0.3)] bg-(--color-blossom-900)/20 scale-[1.03] -translate-y-2 z-10 *:pointer-events-none" 
-              : "border-dashed border-lunar-800 hover:border-blossom-500 hover:bg-(--color-lunar-900)/40"
-            }`}
+        <div
+          className={`bg-surface shadow-card hover:shadow-card-hover relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border-2 p-6 text-center transition-all duration-300 sm:p-8 ${
+            isDraggingCSV
+              ? "border-primary bg-primary/10 scale-[1.01] border-solid shadow-md"
+              : "border-border hover:border-primary/60 hover:bg-surface-hover border-dashed"
+          }`}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnterCSV}
           onDragLeave={handleDragLeaveCSV}
           onDrop={handleCSVDrop}
         >
-          {isDraggingCSV && (
-            <div className="absolute inset-0 bg-linear-to-t from-blossom-500/10 to-transparent animate-pulse pointer-events-none" />
-          )}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-blossom-400 mb-2 transition-all duration-300 ${isDraggingCSV ? "bg-blossom-500/30 scale-125" : "bg-blossom-500/10"}`}>
-            <FileUploadIcon sx={{ fontSize: 32 }} />
+          <div className="text-primary bg-primary/10 border-primary/20 mb-1 flex h-12 w-12 items-center justify-center rounded-xl border">
+            <FileUploadIcon sx={{ fontSize: 24 }} />
           </div>
-          <h2 className={`text-xl font-bold transition-colors ${isDraggingCSV ? "text-blossom-300" : "text-lunar-50"}`}>Goodreads CSV</h2>
-          <p className="text-sm text-lunar-400 max-w-sm">
-            Export the library from Goodreads and upload the CSV here to automatically sync the vault.
+          <h2 className="text-foreground text-base font-semibold">Goodreads CSV</h2>
+          <p className="text-muted max-w-sm text-xs">
+            Export your library from Goodreads and upload the CSV here to automatically sync your
+            reading vault.
           </p>
-          
-          <div className="mt-4">
-            <Button 
-              component="label"
-              variant="contained" 
-              disabled={isUploading}
-              sx={{ bgcolor: "var(--color-blossom-500)", '&:hover': { bgcolor: "var(--color-blossom-400)" }, color: "white", borderRadius: '999px', textTransform: 'none', px: 4, fontWeight: 'bold' }}
+
+          <div className="mt-3">
+            <label
+              className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-semibold transition-all duration-200 select-none ${
+                isUploading
+                  ? "bg-surface-elevated text-muted border-border cursor-not-allowed border opacity-60"
+                  : "bg-primary hover:bg-primary-hover dark:text-primary-fg shadow-card hover:shadow-card-hover border-primary/30 border text-white active:scale-95"
+              }`}
             >
-              {isUploading ? `Importing... ${progress}%` : "Select CSV"}
+              <FileUploadIcon sx={{ fontSize: 16, color: "#ffffff" }} className="text-white" />
+              <span>{isUploading ? `Importing... ${progress}%` : "Select CSV"}</span>
               <input
                 type="file"
                 hidden
                 accept=".csv"
+                disabled={isUploading}
                 onChange={handleFileUpload}
               />
-            </Button>
+            </label>
           </div>
-          
+
           {isUploading && (
-            <div className="w-full max-w-xs mt-4 flex flex-col items-center gap-2">
-              <div className="w-full h-1.5 bg-(--color-lunar-900) rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-blossom-500 transition-all duration-300" 
-                  style={{ width: `${progress}%` }} 
+            <div className="mt-3 flex w-full max-w-xs flex-col items-center gap-2">
+              <div className="bg-surface-elevated border-border h-2 w-full overflow-hidden rounded-full border p-0.5">
+                <div
+                  className="bg-primary h-full rounded-full shadow-xs transition-all duration-300"
+                  style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-xs text-blossom-400 flex items-center gap-1 mt-2 font-semibold">
-                <WarningAmberIcon sx={{ fontSize: 14 }} /> Please keep this page open until finished.
+              <p className="text-muted mt-1 flex items-center gap-1.5 font-mono text-[11px]">
+                <WarningAmberIcon
+                  sx={{ fontSize: 13 }}
+                  className="text-amber-500 dark:text-amber-400"
+                />{" "}
+                Keep this page open until finished.
               </p>
             </div>
           )}
         </div>
       </div>
     </div>
-  );
+  )
 }
