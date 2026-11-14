@@ -18,7 +18,7 @@ import { NextResponse, type NextRequest } from "next/server"
 /**
  * Array of route prefixes that bypass authentication and are publicly accessible.
  */
-const PUBLIC_PATHS = ["/login", "/auth", "/api/cron/sync-series", "/api/icon"]
+const PUBLIC_PATHS = ["/login", "/auth", "/api/cron/sync-series"]
 
 /**
  * Proxy middleware for handling authentication and authorization.
