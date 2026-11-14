@@ -120,14 +120,18 @@ export async function getMediaRepository(): Promise<MediaRepository> {
   const repo: MediaRepository = {
     async findAll(filters) {
       const { data, error } = await buildQuery(filters)
-      if (error) throw new Error(`[MediaRepository] findAll: ${error.message}`)
+      if (error) {
+        console.warn(`[MediaRepository] findAll: ${error.message || JSON.stringify(error)}`)
+        return []
+      }
       return (data as MediaItem[]) ?? []
     },
 
     async findById(id) {
       const { data, error } = await supabase.from("media_items").select("*").eq("id", id).single()
       if (error && error.code !== "PGRST116") {
-        throw new Error(`[MediaRepository] findById: ${error.message}`)
+        console.warn(`[MediaRepository] findById: ${error.message || JSON.stringify(error)}`)
+        return null
       }
       return (data as MediaItem | null) ?? null
     },
@@ -137,15 +141,23 @@ export async function getMediaRepository(): Promise<MediaRepository> {
     },
 
     async count(filters) {
-      let query = supabase.from("media_items").select("*", { count: "exact", head: true })
+      try {
+        let query = supabase.from("media_items").select("*", { count: "exact", head: true })
 
-      if (filters?.type) query = query.eq("type", filters.type)
-      if (filters?.status) query = query.eq("status", filters.status)
-      if (filters?.genre) query = query.contains("genres", [filters.genre])
+        if (filters?.type) query = query.eq("type", filters.type)
+        if (filters?.status) query = query.eq("status", filters.status)
+        if (filters?.genre) query = query.contains("genres", [filters.genre])
 
-      const { count, error } = await query
-      if (error) throw new Error(`[MediaRepository] count: ${error.message}`)
-      return count ?? 0
+        const { count, error } = await query
+        if (error) {
+          console.warn(`[MediaRepository] count: ${error.message || JSON.stringify(error)}`)
+          return 0
+        }
+        return count ?? 0
+      } catch (err) {
+        console.warn("[MediaRepository] count error:", err)
+        return 0
+      }
     },
 
     async insert(item) {

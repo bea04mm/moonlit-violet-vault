@@ -43,31 +43,36 @@ export interface VaultStats {
  * Handles aggregation, formatting helpers, and domain logic.
  */
 export async function getVaultStats(): Promise<VaultStats> {
-  /**
-   * The repository instance used for data access.
-   */
   const repo = await getMediaRepository()
-  const [
-    totalMovies,
-    totalSeries,
-    totalBooks,
-    totalRecipes,
-    watchedMovies,
-    readBooks,
-    cookedRecipes,
-    currentlyWatching,
-    currentlyReading,
-  ] = await Promise.all([
-    repo.count({ type: "movie" }),
-    repo.count({ type: "series" }),
-    repo.count({ type: "book" }),
-    repo.count({ type: "recipe" }),
-    repo.count({ type: "movie", status: "watched" }),
-    repo.count({ type: "book", status: "read" }),
-    repo.count({ type: "recipe", status: "cooked" }),
-    repo.count({ status: "watching" }),
-    repo.count({ status: "reading" }),
-  ])
+  const allItems = await repo.findAll()
+
+  let totalMovies = 0
+  let totalSeries = 0
+  let totalBooks = 0
+  let totalRecipes = 0
+  let watchedMovies = 0
+  let readBooks = 0
+  let cookedRecipes = 0
+  let currentlyWatching = 0
+  let currentlyReading = 0
+
+  for (const item of allItems) {
+    if (item.type === "movie") {
+      totalMovies++
+      if (item.status === "watched") watchedMovies++
+    } else if (item.type === "series") {
+      totalSeries++
+    } else if (item.type === "book") {
+      totalBooks++
+      if (item.status === "read") readBooks++
+    } else if (item.type === "recipe") {
+      totalRecipes++
+      if (item.status === "cooked") cookedRecipes++
+    }
+
+    if (item.status === "watching") currentlyWatching++
+    if (item.status === "reading") currentlyReading++
+  }
 
   return {
     totalMovies,
@@ -124,21 +129,6 @@ export async function getFavorites(): Promise<MediaItem[]> {
    */
   const repo = await getMediaRepository()
   return repo.findAll({ isFavorite: true, sortBy: "date_added", sortOrder: "desc" })
-}
-
-/**
- * Fetches items currently being watched or read.
- */
-export async function getCurrentlyConsuming(): Promise<MediaItem[]> {
-  /**
-   * The repository instance used for data access.
-   */
-  const repo = await getMediaRepository()
-  const [watching, reading] = await Promise.all([
-    repo.findAll({ status: "watching" }),
-    repo.findAll({ status: "reading" }),
-  ])
-  return [...watching, ...reading]
 }
 
 /**
