@@ -8,7 +8,6 @@
  */
 "use client"
 
-import { useEffect } from "react"
 import ErrorOutlinedIcon from "@mui/icons-material/ErrorOutlined"
 import RefreshIcon from "@mui/icons-material/Refresh"
 
@@ -22,32 +21,42 @@ export default function VaultError({
   error: Error & { digest?: string }
   unstable_retry: () => void
 }) {
-  useEffect(() => {
-    console.error("[VaultError]", error)
-  }, [error])
-
   return (
-    <div className="animate-fade-in flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10">
-        <ErrorOutlinedIcon sx={{ fontSize: 24 }} className="text-rose-500" />
-      </div>
-      <div className="space-y-1">
-        <h1 className="text-foreground text-lg font-semibold tracking-tight">
-          Something went wrong
-        </h1>
-        <p className="text-muted max-w-sm text-xs">
+    <div className="animate-fade-in bg-background relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden p-6 text-center">
+      <div className="relative z-10 flex max-w-sm flex-col items-center">
+        <div className="bg-surface border-border mb-6 flex h-16 w-16 items-center justify-center rounded-xl border text-rose-500 shadow-xs dark:text-rose-400">
+          <ErrorOutlinedIcon
+            sx={{ fontSize: 32, color: "#f43f5e !important", fill: "#f43f5e !important" }}
+          />
+        </div>
+
+        <div className="mb-2 flex items-baseline gap-2">
+          <h1 className="font-display text-foreground text-4xl font-semibold tracking-tight">
+            500
+          </h1>
+          <span className="font-handwriting text-accent text-lg select-none">system glitch</span>
+        </div>
+
+        <h2 className="text-foreground mb-2 text-sm font-semibold">Something went wrong</h2>
+
+        <p className="text-muted mb-8 text-xs leading-relaxed">
           {error.digest
-            ? `Error ID: ${error.digest}`
-            : "An unexpected error occurred while loading."}
+            ? `The vault ran into a hiccup (Error ID: ${error.digest}). Please try again.`
+            : "An unexpected error occurred while loading this vault resource. Please try again."}
         </p>
+
+        <button
+          onClick={() => unstable_retry()}
+          className="bg-primary flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:opacity-90"
+        >
+          <RefreshIcon
+            fontSize="small"
+            className="text-white"
+            sx={{ color: "#ffffff !important", fill: "#ffffff !important" }}
+          />
+          Try Again
+        </button>
       </div>
-      <button
-        onClick={() => unstable_retry()}
-        className="bg-surface-elevated border-border text-foreground hover:bg-surface hover:border-primary hover:text-primary flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-xs font-medium transition-colors"
-      >
-        <RefreshIcon fontSize="small" />
-        Try again
-      </button>
     </div>
   )
 }

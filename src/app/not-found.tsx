@@ -39,9 +39,13 @@ export default function NotFound() {
 
         <Link
           href="/"
-          className="bg-primary text-primary-fg flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold shadow-sm transition-all hover:opacity-90"
+          className="bg-primary flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:opacity-90"
         >
-          <ArrowBackIcon fontSize="small" />
+          <ArrowBackIcon
+            fontSize="small"
+            className="text-white"
+            sx={{ color: "#ffffff !important", fill: "#ffffff !important" }}
+          />
           Back to Vault
         </Link>
       </div>
