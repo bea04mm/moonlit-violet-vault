@@ -473,9 +473,18 @@ input[type="number"] {
 
 /* Only solid floating / quick-action buttons with text-white keep their icons white */
 :where([data-theme="dark"], .dark) button.text-white > svg,
-:where([data-theme="dark"], .dark) .text-white > svg {
+:where([data-theme="dark"], .dark) .text-white > svg,
+:where([data-theme="dark"], .dark) .text-primary-fg > svg,
+:where([data-theme="dark"], .dark) a.text-white > svg,
+:where([data-theme="dark"], .dark) a.bg-primary > svg {
   color: #ffffff !important;
   fill: #ffffff !important;
+}
+
+/* Ensure sign-out icon turns red/rose on hover in dark mode */
+:where([data-theme="dark"], .dark) #sign-out-btn:hover svg {
+  color: #fb7185 !important;
+  fill: #fb7185 !important;
 }
 
 /* Hide clear buttons in tags and date pickers */

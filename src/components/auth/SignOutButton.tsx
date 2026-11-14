@@ -35,11 +35,14 @@ export function SignOutButton() {
     <button
       id="sign-out-btn"
       onClick={handleSignOut}
-      className="bg-surface/70 hover:bg-surface border-border text-primary group flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border shadow-2xs transition-all hover:border-rose-500/40 hover:text-rose-500"
+      className="bg-surface/70 hover:bg-surface border-border text-primary group flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border shadow-2xs transition-all hover:border-rose-500/40 hover:text-rose-500 dark:hover:border-rose-500/50 dark:hover:text-rose-400"
       title="Sign out"
       aria-label="Sign out"
     >
-      <LogoutIcon sx={{ fontSize: 17 }} className="transition-colors" />
+      <LogoutIcon
+        sx={{ fontSize: 17 }}
+        className="transition-colors group-hover:text-rose-500 dark:group-hover:text-rose-400"
+      />
     </button>
   )
 }

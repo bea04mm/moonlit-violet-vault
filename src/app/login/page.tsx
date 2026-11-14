@@ -45,7 +45,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         {/* Logo / title */}
         <div className="mb-8 text-center">
           <div className="text-primary mb-3 flex justify-center" aria-hidden="true">
-            <NightlightIcon sx={{ fontSize: 44 }} />
+            <NightlightIcon sx={{ fontSize: 38 }} />
           </div>
           <div className="mb-1 flex items-baseline justify-center gap-2">
             <h1 className="font-display text-foreground text-2xl font-semibold tracking-tight">
