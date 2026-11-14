@@ -66,30 +66,6 @@ export interface TmdbEpisode {
   overview?: string
 }
 
-/**
- * Full details for a TV series returned by the TMDB /tv/{id} endpoint.
- */
-export interface TmdbSeriesDetails {
-  seasons: TmdbSeason[]
-  /**
-   * Array of average episode runtimes in minutes (e.g. [42, 45]).
-   */
-  episode_run_time?: number[]
-  genres?: { name: string }[]
-  overview?: string
-  number_of_episodes?: number
-  number_of_seasons?: number
-}
-
-/**
- * Full details for a movie returned by the TMDB /movie/{id} endpoint.
- */
-export interface TmdbMovieDetails {
-  runtime?: number
-  genres?: { name: string }[]
-  overview?: string
-}
-
 // ─── Google Books ─────────────────────────────────────────────────────────────
 
 /**
