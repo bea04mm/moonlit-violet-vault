@@ -82,6 +82,10 @@ export interface GoogleBooksVolumeInfo {
   categories?: string[]
   pageCount?: number | string
   imageLinks?: {
+    extraLarge?: string
+    large?: string
+    medium?: string
+    small?: string
     thumbnail?: string
     smallThumbnail?: string
   }

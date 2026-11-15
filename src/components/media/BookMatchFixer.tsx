@@ -9,9 +9,15 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import SearchIcon from "@mui/icons-material/Search"
 import Image from "next/image"
-import { updateMediaProgress, searchGoogleBooks } from "@/lib/actions/mediaActions"
+import {
+  updateMediaProgress,
+  searchGoogleBooks,
+  fetchBookDetails,
+  refreshBookDetails,
+} from "@/lib/actions/mediaActions"
 import { toast } from "sonner"
 import type { MediaItem } from "@/lib/supabase/database.types"
 import type { GoogleBooksItem } from "@/types"
@@ -21,11 +27,34 @@ import type { GoogleBooksItem } from "@/types"
  * Shown on the book detail page below the cover image.
  */
 export function BookMatchFixer({ item }: { item: MediaItem }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState(item.title)
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [results, setResults] = useState<GoogleBooksItem[]>([])
   const [customCover, setCustomCover] = useState("")
+
+  /**
+   * Refreshes high-res cover and details directly from the details endpoint.
+   */
+  const handleRefreshCover = async () => {
+    setRefreshing(true)
+    try {
+      const res = await refreshBookDetails(item.id)
+      if (res.success) {
+        toast.success("High-res cover updated from details endpoint!")
+        router.refresh()
+        setOpen(false)
+      } else {
+        toast.error("Could not find matching book details. Please search below.")
+      }
+    } catch (e) {
+      toast.error(`Refresh failed: ${e instanceof Error ? e.message : "Unknown error"}`)
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   /**
    * Initiates a search against the Google Books API using the provided query and updates the results list.
@@ -54,6 +83,7 @@ export function BookMatchFixer({ item }: { item: MediaItem }) {
       // Directly update the media item with the custom URL
       await updateMediaProgress(item.id, { cover_url: customCover })
       toast.success("Cover updated!")
+      router.refresh()
       setOpen(false)
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error"
@@ -65,35 +95,44 @@ export function BookMatchFixer({ item }: { item: MediaItem }) {
    * Selects a book from the search results, merges its metadata with the current item, and saves the update.
    */
   const handleSelect = async (book: GoogleBooksItem) => {
-    /**
-     * Extracted volume information containing book metadata from the Google Books API response.
-     */
-    const info = book.volumeInfo
-    /**
-     * Best available cover image URL extracted from the volume information.
-     */
-    let coverUrl = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null
-    if (coverUrl) {
-      // Upgrade HTTP links to HTTPS and remove curl edge crop parameters
-      coverUrl = coverUrl.replace("http://", "https://").replace("&edge=curl", "")
-    }
-
+    setLoading(true)
     try {
-      // Merge selected Google Books metadata with existing item data
+      const info = book.volumeInfo
+      const fallbackQuery = `${info.title || item.title} ${info.authors?.join(" ") || item.author || ""}`.trim()
+      const details = await fetchBookDetails(book.id, fallbackQuery)
+      const coverUrl =
+        details?.coverUrl ||
+        info.imageLinks?.extraLarge ||
+        info.imageLinks?.large ||
+        info.imageLinks?.medium ||
+        info.imageLinks?.thumbnail ||
+        info.imageLinks?.smallThumbnail ||
+        null
+      const cleanCover = coverUrl
+        ? coverUrl.replace("http://", "https://").replace("&edge=curl", "")
+        : null
+
       await updateMediaProgress(item.id, {
-        title: info.title || item.title,
-        cover_url: coverUrl || item.cover_url,
-        synopsis: info.description || item.synopsis,
-        genres: info.categories || item.genres,
-        author: info.authors ? info.authors.join(", ") : item.author,
-        release_year: info.publishedDate ? parseInt(info.publishedDate) : item.release_year,
-        total_pages: info.pageCount ? Number(info.pageCount) : item.total_pages,
+        title: details?.title || info.title || item.title,
+        cover_url: cleanCover || item.cover_url,
+        synopsis: details?.synopsis || info.description || item.synopsis,
+        genres: details?.genres || info.categories || item.genres,
+        author: details?.author || (info.authors ? info.authors.join(", ") : item.author),
+        release_year:
+          details?.releaseYear ||
+          (info.publishedDate ? parseInt(info.publishedDate) : item.release_year),
+        total_pages:
+          details?.totalPages || (info.pageCount ? Number(info.pageCount) : item.total_pages),
+        google_books_id: book.id,
       })
-      toast.success("Book metadata updated!")
+      toast.success("Book metadata & high-res cover updated!")
+      router.refresh()
       setOpen(false)
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error"
       toast.error(`Failed to update book: ${msg}`)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -131,6 +170,15 @@ export function BookMatchFixer({ item }: { item: MediaItem }) {
             </div>
 
             <div className="custom-scrollbar flex-1 overflow-y-auto pr-1">
+              <button
+                type="button"
+                onClick={handleRefreshCover}
+                disabled={refreshing}
+                className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary/50 mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                {refreshing ? "Fetching Details..." : "Auto-fetch High-Res Cover from Details"}
+              </button>
+
               <div className="mb-4 flex gap-2">
                 <input
                   type="text"

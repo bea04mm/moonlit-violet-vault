@@ -14,7 +14,7 @@
 import { getMediaRepository } from "@/lib/repositories/mediaRepository"
 import type { MediaItem } from "@/lib/supabase/database.types"
 import { revalidatePath } from "next/cache"
-import { searchGoogleBooks } from "./mediaActions"
+import { searchGoogleBooks, fetchBookDetails } from "./mediaActions"
 
 /**
  * Processes a batch of book records parsed from a Goodreads CSV file.
@@ -92,18 +92,32 @@ export async function importGoodreadsBatch(books: Partial<MediaItem>[]) {
 
         // 5. Process the best result we found
         if (items && items.length > 0) {
-          const info = items[0].volumeInfo
-          if (info) {
-            // Pick highest quality cover URL and swap to HTTPS
-            let coverUrl = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null
-            if (coverUrl) {
-              coverUrl = coverUrl.replace("zoom=1", "zoom=3").replace("http://", "https://")
+          const best = items[0]
+          try {
+            const details = await fetchBookDetails(best.id)
+            if (details) {
+              book.google_books_id = best.id
+              book.title = details.title || book.title
+              book.cover_url = details.coverUrl || duplicate?.cover_url
+              book.synopsis = details.synopsis || book.synopsis || duplicate?.synopsis
+              book.genres = details.genres || book.genres || duplicate?.genres
+              if (details.totalPages && !book.total_pages) book.total_pages = details.totalPages
+              if (details.author && !book.author) book.author = details.author
+              if (details.releaseYear && !book.release_year) book.release_year = details.releaseYear
             }
-            // Fallback to original or duplicate data if Google Books is missing fields
-            book.title = info.title || book.title
-            book.cover_url = coverUrl || duplicate?.cover_url
-            book.synopsis = info.description || book.synopsis || duplicate?.synopsis
-            book.genres = info.categories || book.genres || duplicate?.genres
+          } catch {
+            const info = best.volumeInfo
+            if (info) {
+              let coverUrl = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null
+              if (coverUrl) {
+                coverUrl = coverUrl.replace("zoom=1", "zoom=2").replace("http://", "https://")
+              }
+              book.title = info.title || book.title
+              book.cover_url = coverUrl || duplicate?.cover_url
+              book.synopsis = info.description || book.synopsis || duplicate?.synopsis
+              book.genres = info.categories || book.genres || duplicate?.genres
+              book.google_books_id = best.id
+            }
           }
         }
       } catch (enrichError) {

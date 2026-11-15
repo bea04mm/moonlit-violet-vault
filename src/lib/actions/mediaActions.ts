@@ -18,10 +18,12 @@
 
 import { revalidatePath } from "next/cache"
 import { getMediaRepository } from "@/lib/repositories/mediaRepository"
+import { formatSynopsis } from "@/lib/utils/formatters"
 import type { MediaItem, MediaType, SeasonData } from "@/lib/supabase/database.types"
 import type {
   TmdbMovieResponse,
   GoogleBooksItem,
+  GoogleBooksVolumeInfo,
   MealDbMeal,
   TmdbSeason,
   TmdbEpisode,
@@ -127,8 +129,20 @@ export async function searchExternalMedia(query: string, type: MediaType): Promi
     )
 
     if (!res.ok) {
-      const errorText = await res.text()
-      throw new Error(`Failed to fetch from Google Books (Status: ${res.status}): ${errorText}`)
+      console.warn("Google Books search failed or quota reached. Falling back to OpenLibrary...")
+      const olItems = await searchOpenLibrary(query)
+      return olItems.map((item: any) => ({
+        externalId: item.id,
+        type: "book" as MediaType,
+        title: item.volumeInfo?.title || "",
+        coverUrl: item.volumeInfo?.imageLinks?.thumbnail,
+        releaseYear: item.volumeInfo?.publishedDate
+          ? parseInt(item.volumeInfo.publishedDate.substring(0, 4))
+          : undefined,
+        synopsis: item.volumeInfo?.description,
+        author: item.volumeInfo?.authors?.join(", "),
+        totalPages: item.volumeInfo?.pageCount,
+      }))
     }
     /**
      * The parsed JSON data payload containing the Google Books search results.
@@ -137,9 +151,19 @@ export async function searchExternalMedia(query: string, type: MediaType): Promi
 
     return (data.items || []).map((item: GoogleBooksItem) => {
       const info = item.volumeInfo
-      let coverUrl = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail
+      const links = info.imageLinks
+      let coverUrl =
+        links?.extraLarge ||
+        links?.large ||
+        links?.medium ||
+        links?.small ||
+        links?.thumbnail ||
+        links?.smallThumbnail
       if (coverUrl) {
         coverUrl = coverUrl.replace("http://", "https://").replace("&edge=curl", "")
+        if (!links?.extraLarge && !links?.large && !links?.medium) {
+          coverUrl = coverUrl.replace(/zoom=[15]/, "zoom=2")
+        }
       }
 
       return {
@@ -148,7 +172,7 @@ export async function searchExternalMedia(query: string, type: MediaType): Promi
         title: info.title || "",
         coverUrl,
         releaseYear: info.publishedDate ? parseInt(info.publishedDate.substring(0, 4)) : undefined,
-        synopsis: info.description || undefined,
+        synopsis: info.description ? formatSynopsis(info.description) : undefined,
         author: info.authors ? info.authors.join(", ") : undefined,
         totalPages: info.pageCount ? parseInt(String(info.pageCount)) : undefined,
       }
@@ -315,6 +339,14 @@ export async function addMediaToVault(result: SearchResult): Promise<void> {
    */
   let nextEpisodeAirDate: string | null = null
 
+  let coverUrl = result.coverUrl
+  let title = result.title
+  let synopsis = result.synopsis
+  let author = result.author
+  let totalPages = result.totalPages
+  let releaseYear = result.releaseYear
+  let genres = result.genres
+
   if (result.type === "movie" || result.type === "series") {
     /**
      * The TMDB API endpoint dynamically selected to fetch deep details.
@@ -346,6 +378,22 @@ export async function addMediaToVault(result: SearchResult): Promise<void> {
         }
       }
     }
+  } else if (result.type === "book" && result.externalId) {
+    try {
+      const fallbackQuery = `${result.title} ${result.author || ""}`.trim()
+      const bookDetails = await fetchBookDetails(result.externalId, fallbackQuery)
+      if (bookDetails) {
+        if (bookDetails.coverUrl) coverUrl = bookDetails.coverUrl
+        if (bookDetails.title) title = bookDetails.title
+        if (bookDetails.synopsis) synopsis = bookDetails.synopsis
+        if (bookDetails.author) author = bookDetails.author
+        if (bookDetails.totalPages) totalPages = bookDetails.totalPages
+        if (bookDetails.releaseYear) releaseYear = bookDetails.releaseYear
+        if (bookDetails.genres?.length) genres = bookDetails.genres
+      }
+    } catch (err) {
+      console.warn("Failed to fetch detailed book info from details endpoint:", err)
+    }
   }
 
   /**
@@ -353,13 +401,14 @@ export async function addMediaToVault(result: SearchResult): Promise<void> {
    */
   const newItem: Partial<MediaItem> = {
     type: result.type,
-    title: result.title,
+    title,
     original_title: result.originalTitle,
-    cover_url: result.coverUrl,
-    release_year: result.releaseYear,
-    synopsis: result.synopsis,
-    author: result.author,
-    total_pages: result.totalPages,
+    cover_url: coverUrl,
+    release_year: releaseYear,
+    synopsis,
+    author,
+    genres,
+    total_pages: totalPages,
     runtime_minutes: runtimeMinutes,
     episode_count: episodeCount,
     season_count: seasonCount,
@@ -723,4 +772,169 @@ export async function searchGoogleBooks(query: string) {
     console.warn("Failed to search Google Books, trying OpenLibrary...", error)
     return await searchOpenLibrary(query)
   }
+}
+
+/**
+ * Fetches full details for a book from the volume details endpoint
+ * (`https://www.googleapis.com/books/v1/volumes/{volumeId}` or OpenLibrary).
+ * Seamlessly falls back to OpenLibrary if Google Books hits quota (429) or lacks high-res covers.
+ */
+export async function fetchBookDetails(volumeId: string, fallbackQuery?: string) {
+  if (!volumeId && !fallbackQuery) return null
+
+  // 1. OpenLibrary key directly
+  if (volumeId && (volumeId.startsWith("/works/") || volumeId.startsWith("OL"))) {
+    try {
+      const cleanKey = volumeId.startsWith("/") ? volumeId : `/${volumeId}`
+      const res = await fetch(`https://openlibrary.org${cleanKey}.json`, { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        const coverId = Array.isArray(data.covers) && data.covers.length > 0 ? data.covers[0] : null
+        return {
+          title: data.title as string | undefined,
+          coverUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : undefined,
+          synopsis: typeof data.description === "string" ? data.description : data.description?.value,
+          totalPages: undefined,
+          genres: undefined,
+          author: undefined,
+          releaseYear: undefined,
+        }
+      }
+    } catch (err) {
+      console.warn("OpenLibrary details fetch failed:", err)
+    }
+  }
+
+  // 2. Google Books volume details endpoint
+  let googleData: any = null
+  if (volumeId) {
+    try {
+      const apiKey = process.env.GOOGLE_BOOKS_API_KEY
+      const url = `https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(volumeId)}${apiKey ? `?key=${apiKey}` : ""}`
+      const res = await fetch(url, { cache: "no-store" })
+      if (res.ok) {
+        googleData = await res.json()
+      } else {
+        console.warn(`Google Books volume details returned status ${res.status}. Falling back to OpenLibrary...`)
+      }
+    } catch (err) {
+      console.warn("Google Books volume details fetch failed:", err)
+    }
+  }
+
+  if (googleData) {
+    const info: GoogleBooksVolumeInfo = googleData.volumeInfo || {}
+    const links = info.imageLinks
+
+    const rawCover =
+      links?.extraLarge ||
+      links?.large ||
+      links?.medium ||
+      links?.small ||
+      links?.thumbnail ||
+      links?.smallThumbnail
+
+    let coverUrl: string | undefined
+    if (rawCover) {
+      const sanitized = rawCover.replace("http://", "https://").replace("&edge=curl", "")
+      coverUrl =
+        !links?.extraLarge && !links?.large && !links?.medium
+          ? sanitized.replace(/zoom=[15]/, "zoom=2")
+          : sanitized
+    }
+
+    // If Google Books only provided a low-res thumbnail, check OpenLibrary for an -L.jpg cover
+    const query = fallbackQuery || `${info.title || ""} ${info.authors?.join(" ") || ""}`.trim()
+    if ((!links?.extraLarge && !links?.large && !links?.medium) && query) {
+      try {
+        const olRes = await fetch(
+          `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=1`,
+          { cache: "no-store" }
+        )
+        if (olRes.ok) {
+          const olData = await olRes.json()
+          const doc = olData.docs?.[0]
+          if (doc?.cover_i) {
+            coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+          }
+        }
+      } catch {
+        // preserve Google Books coverUrl
+      }
+    }
+
+    return {
+      title: info.title,
+      coverUrl,
+      synopsis: info.description ? formatSynopsis(info.description) : undefined,
+      totalPages: info.pageCount ? Number(info.pageCount) : undefined,
+      genres: info.categories,
+      author: info.authors?.join(", "),
+      releaseYear: info.publishedDate ? parseInt(info.publishedDate.substring(0, 4)) : undefined,
+    }
+  }
+
+  // 3. Fallback: Query OpenLibrary search if Google Books is unavailable (e.g. 429 quota)
+  if (fallbackQuery) {
+    try {
+      const olRes = await fetch(
+        `https://openlibrary.org/search.json?q=${encodeURIComponent(fallbackQuery)}&limit=1`,
+        { cache: "no-store" }
+      )
+      if (olRes.ok) {
+        const olData = await olRes.json()
+        const doc = olData.docs?.[0]
+        if (doc) {
+          return {
+            title: doc.title as string | undefined,
+            coverUrl: doc.cover_i
+              ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+              : undefined,
+            synopsis: doc.first_sentence?.[0] as string | undefined,
+            totalPages: doc.number_of_pages_median as number | undefined,
+            genres: doc.subject?.slice(0, 3) as string[] | undefined,
+            author: doc.author_name?.join(", ") as string | undefined,
+            releaseYear: doc.first_publish_year as number | undefined,
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("OpenLibrary fallback failed:", err)
+    }
+  }
+
+  return null
+}
+
+/**
+ * Refreshes an existing book's cover and metadata from the volume details endpoint.
+ */
+export async function refreshBookDetails(id: string): Promise<{ success: boolean; coverUrl?: string }> {
+  const repo = await getMediaRepository()
+  const item = await repo.findById(id)
+  if (!item || item.type !== "book") return { success: false }
+
+  const fallbackQuery = `${item.title} ${item.author || ""}`.trim()
+  let volumeId = item.google_books_id
+  if (!volumeId) {
+    const searchResults = await searchGoogleBooks(fallbackQuery)
+    if (searchResults.length > 0) {
+      volumeId = searchResults[0].id
+    }
+  }
+
+  const details = await fetchBookDetails(volumeId || "", fallbackQuery)
+  if (!details) return { success: false }
+
+  const updates: Partial<MediaItem> = {
+    google_books_id: volumeId || item.google_books_id,
+  }
+  if (details.coverUrl) updates.cover_url = details.coverUrl
+  if (details.synopsis && (!item.synopsis || item.synopsis.length < 50)) updates.synopsis = details.synopsis
+  if (details.totalPages && !item.total_pages) updates.total_pages = details.totalPages
+  if (details.genres && (!item.genres || item.genres.length === 0)) updates.genres = details.genres
+
+  await repo.update(id, updates)
+  revalidatePath("/", "layout")
+  return { success: true, coverUrl: details.coverUrl }
 }

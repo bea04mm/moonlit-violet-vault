@@ -16,7 +16,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type { MediaItem } from "@/lib/supabase/database.types"
 import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS, TYPE_COLORS } from "@/lib/constants"
-import { formatRating, getCoverPlaceholder } from "@/lib/utils/formatters"
+import {
+  formatRating,
+  getCoverPlaceholder,
+  getOptimizedCoverUrl,
+  formatSynopsis,
+} from "@/lib/utils/formatters"
 import { useState } from "react"
 import { toast } from "sonner"
 import { motion, useAnimation, type PanInfo } from "framer-motion"
@@ -46,7 +51,7 @@ export function MediaCard({ item, disableGestures = false, priority = false }: M
   const isDashboard = pathname === "/"
 
   const href = `/${item.type === "series" ? "series" : item.type === "book" ? "books" : item.type === "recipe" ? "recipes" : "movies"}/${item.id}`
-  const coverSrc = item.cover_url ?? getCoverPlaceholder(item.title)
+  const coverSrc = getOptimizedCoverUrl(item.cover_url) ?? getCoverPlaceholder(item.title)
 
   const hasNewEpisodes =
     item.type === "series" &&
@@ -321,7 +326,7 @@ export function MediaCard({ item, disableGestures = false, priority = false }: M
                           : "line-clamp-4 sm:line-clamp-5"
                   }`}
                 >
-                  {item.synopsis.replace(/[*_#~`>]/g, "")}
+                  {formatSynopsis(item.synopsis).replace(/[*_#~`>]/g, "")}
                 </p>
               )}
 

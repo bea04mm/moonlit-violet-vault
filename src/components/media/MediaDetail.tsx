@@ -10,7 +10,12 @@ import Image from "next/image"
 import type { MediaItem, MediaStatus, ReadingSession } from "@/lib/supabase/database.types"
 import { Badge } from "@/components/ui/Badge"
 import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS, TYPE_COLORS } from "@/lib/constants"
-import { formatRating, getCoverPlaceholder } from "@/lib/utils/formatters"
+import {
+  formatRating,
+  getCoverPlaceholder,
+  getOptimizedCoverUrl,
+  formatSynopsis,
+} from "@/lib/utils/formatters"
 import Link from "next/link"
 import { ProgressLogger } from "./ProgressLogger"
 import { DeleteButton } from "./DeleteButton"
@@ -49,7 +54,7 @@ export function MediaDetail({ item }: MediaDetailProps) {
   /**
    * Resolved URL for the item's cover image, falling back to a placeholder if missing.
    */
-  const coverSrc = item.cover_url ?? getCoverPlaceholder(item.title)
+  const coverSrc = getOptimizedCoverUrl(item.cover_url) ?? getCoverPlaceholder(item.title)
   /**
    * Next.js router instance for handling client-side navigation.
    */
@@ -332,7 +337,7 @@ export function MediaDetail({ item }: MediaDetailProps) {
                             br: (props) => <br {...props} />,
                           }}
                         >
-                          {item.synopsis}
+                          {formatSynopsis(item.synopsis)}
                         </ReactMarkdown>
                       </div>
                     </div>
