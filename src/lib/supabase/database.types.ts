@@ -55,6 +55,12 @@ export interface SeasonData {
   total: number
   watched: number
   episodes: Record<string, EpisodeData> // Key is episode number (e.g., "1")
+  /** Season-specific poster artwork path on TMDB */
+  poster_path?: string | null
+  /** Display name of the season (e.g. "Season 1", "Special Episodes") */
+  name?: string
+  /** Season premiere air date in ISO format (YYYY-MM-DD) */
+  air_date?: string | null
 }
 
 /**
@@ -107,6 +113,28 @@ export interface MediaItem {
   updated_at: string
 }
 
+/**
+ * Type definition for custom franchise records stored in Supabase.
+ */
+export interface FranchiseRow {
+  /** Unique primary key identifier slug (e.g. 'marvel', 'dc', 'star-wars') */
+  id: string
+  /** Official full title of the franchise */
+  name: string
+  /** Short badge or pill label */
+  short_name: string
+  /** Editorial subtitle or description */
+  tagline: string | null
+  /** Primary branding hex accent color */
+  accent_color: string | null
+  /** Array of JSON franchise checklist items */
+  items: Array<Record<string, unknown>>
+  /** Timestamp when the record was created */
+  created_at: string
+  /** Timestamp when the record was last modified */
+  updated_at: string
+}
+
 // Supabase Database type shape for createClient generics
 export interface Database {
   public: {
@@ -117,6 +145,16 @@ export interface Database {
           id?: string
         }
         Update: Partial<Omit<MediaItem, "id" | "created_at">>
+        Relationships: []
+      }
+      franchises: {
+        Row: FranchiseRow
+        Insert: Omit<FranchiseRow, "created_at" | "updated_at"> & {
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Omit<FranchiseRow, "id" | "created_at">>
+        Relationships: []
       }
     }
     Views: Record<string, never>
