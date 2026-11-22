@@ -20,6 +20,7 @@ import Image from "next/image"
 import SearchIcon from "@mui/icons-material/Search"
 import MovieIcon from "@mui/icons-material/Movie"
 import TvIcon from "@mui/icons-material/Tv"
+import HubIcon from "@mui/icons-material/Hub"
 import MenuBookIcon from "@mui/icons-material/MenuBook"
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu"
 import BarChartIcon from "@mui/icons-material/BarChart"
@@ -106,7 +107,7 @@ export function CommandPalette() {
     setIsOpen(true)
     setQuery("")
     setActiveType("all")
-    const navPaths = ["/", "/movies", "/series", "/books", "/recipes", "/import", "/analytics"]
+    const navPaths = ["/", "/movies", "/series", "/franchises", "/books", "/recipes", "/import", "/analytics"]
     const currentIndex = navPaths.indexOf(pathname)
     setSelectedIndex(currentIndex !== -1 ? currentIndex : 0)
     if (items.length === 0) {
@@ -201,6 +202,13 @@ export function CommandPalette() {
         label: "Series",
         icon: <TvIcon fontSize="small" className="text-primary" />,
         path: "/series",
+      },
+      {
+        type: "nav",
+        id: "nav-franchises",
+        label: "Franchises",
+        icon: <HubIcon fontSize="small" className="text-primary" />,
+        path: "/franchises",
       },
       {
         type: "nav",

@@ -18,6 +18,18 @@ import { searchExternalMedia, addMediaToVault } from "./mediaActions"
 import type { MediaType, MediaItem } from "@/lib/supabase/database.types"
 
 /**
+ * Candidate Gemini models in order of preference.
+ * Defaults to the Google-recommended modern model (gemini-3.8-flash) and gracefully falls
+ * back if high-demand (503) or rate limits occur.
+ */
+const GEMINI_MODELS = [
+  "gemini-3.8-flash",
+  "gemini-3-flash-preview",
+  "gemini-3.5-flash-lite",
+  "gemini-flash-latest",
+] as const
+
+/**
  * System instruction sent to Gemini on every image analysis request.
  * Defines the expected output format (JSON array) and the two extraction modes:
  * media title lists and full recipe objects.
@@ -62,31 +74,36 @@ export async function extractTitlesFromImage(formData: FormData) {
      * The initialized Google Generative AI client.
      */
     const genAI = new GoogleGenerativeAI(apiKey)
-    /**
-     * The Gemini 2.0 Flash model configured with OCR-specific system instructions.
-     */
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
-      systemInstruction: SYSTEM_PROMPT,
-    })
-
-    /**
-     * The specific prompt instructing the model to extract and return JSON.
-     */
     const userPrompt = `Extract all visible media titles or recipes from this image and return them as a JSON array.`
 
-    /**
-     * The raw response result returned from the Gemini model.
-     */
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          data: base64Image.replace(/^data:image\/\w+;base64,/, ""),
-          mimeType: mimeType,
-        },
-      },
-      userPrompt,
-    ])
+    let result: any = null
+    let lastError: any = null
+
+    for (const modelName of GEMINI_MODELS) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: SYSTEM_PROMPT,
+        })
+        result = await model.generateContent([
+          {
+            inlineData: {
+              data: base64Image.replace(/^data:image\/\w+;base64,/, ""),
+              mimeType: mimeType,
+            },
+          },
+          userPrompt,
+        ])
+        if (result) break
+      } catch (err: any) {
+        lastError = err
+        console.warn(`[OCR] Model ${modelName} failed, trying fallback:`, err?.message || err)
+      }
+    }
+
+    if (!result) {
+      throw lastError || new Error("Failed to extract content with available Gemini models.")
+    }
 
     /**
      * The text payload extracted from the model's response.

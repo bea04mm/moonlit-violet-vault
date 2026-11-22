@@ -64,6 +64,13 @@ export interface MediaRepository {
   findByType(type: MediaType, filters?: Omit<MediaFilters, "type">): Promise<MediaItem[]>
   count(filters?: MediaFilters): Promise<number>
   insert(item: Partial<MediaItem>): Promise<MediaItem>
+  /**
+   * Inserts multiple media items into the database in a single batch operation.
+   *
+   * @param items - Array of partial media item objects to insert.
+   * @returns Array of created MediaItem records with database IDs.
+   */
+  batchInsert(items: Partial<MediaItem>[]): Promise<MediaItem[]>
   update(id: string, updates: Partial<MediaItem>): Promise<MediaItem>
   delete(id: string): Promise<void>
 }
@@ -172,6 +179,20 @@ export async function getMediaRepository(): Promise<MediaRepository> {
         throw new Error(`[MediaRepository] insert: ${error.message}`)
       }
       return data as MediaItem
+    },
+
+    async batchInsert(items) {
+      if (!items.length) return []
+      const { data, error } = await supabase
+        .from("media_items")
+        // @ts-expect-error Supabase insert types can be overly strict
+        .insert(items)
+        .select()
+
+      if (error) {
+        throw new Error(`[MediaRepository] batchInsert: ${error.message}`)
+      }
+      return (data as MediaItem[]) || []
     },
 
     async update(id, updates) {
