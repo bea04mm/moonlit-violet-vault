@@ -6,6 +6,7 @@
 import { notFound } from "next/navigation"
 import { getMediaItem } from "@/lib/services/mediaService"
 import { MediaDetail } from "@/components/media/MediaDetail"
+import { syncSeriesSeasons } from "@/lib/actions/mediaActions"
 import type { Metadata } from "next"
 
 /**
@@ -47,6 +48,18 @@ export default async function SeriesDetailPage({ params }: PageProps) {
 
   if (!item || item.type !== "series") {
     notFound()
+  }
+
+  // Auto-refresh episode/season data from TMDB if older than 24 hours
+  if (item.tmdb_id) {
+    const isOutdated =
+      !item.last_synced_at ||
+      Date.now() - new Date(item.last_synced_at).getTime() > 24 * 60 * 60 * 1000
+    if (isOutdated) {
+      syncSeriesSeasons(item.id, item.tmdb_id).catch((err) =>
+        console.warn(`[SeriesDetailPage] Auto-sync background failed for ${item.title}:`, err)
+      )
+    }
   }
 
   return <MediaDetail item={item} />

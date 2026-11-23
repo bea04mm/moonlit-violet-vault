@@ -1,80 +1,56 @@
 /**
- * Background cron endpoint to synchronize TV series data with TMDB.
+ * Background cron and manual endpoint to synchronize TV series and movies data with TMDB.
  *
  * @packageDocumentation
  */
 import { NextResponse } from "next/server"
-import { getMediaRepository } from "@/lib/repositories/mediaRepository"
-import { syncSeriesSeasons } from "@/lib/actions/mediaActions"
+import { syncAllSeriesAction, syncAllMoviesAction } from "@/lib/actions/mediaActions"
 
 /**
- * GET handler for the cron job.
- * Validates the CRON_SECRET authorization header, fetches all series,
- * and triggers a sync for items that haven't been synced in 24 hours.
- * @param request The incoming HTTP request containing the auth header.
+ * Periodic GET handler invoked by Vercel Cron or client-side background triggers.
+ * Verifies optional CRON_SECRET or same-origin internal headers, then synchronizes
+ * active TV series episodes and vault movies against TMDB.
+ *
+ * @param request - Inbound HTTP Request
+ * @returns JSON status report detailing sync outcome and counts
  */
 export async function GET(request: Request) {
-  // Verify cron secret to prevent unauthorized triggering
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
-    /**
-     * The Authorization header containing the bearer token holding the cron secret.
-     */
     const authHeader = request.headers.get("authorization")
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    const isInternal =
+      request.headers.get("sec-fetch-site") === "same-origin" ||
+      request.headers.get("x-internal-sync") === "true"
+    if (!isInternal && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
   }
-  try {
-    /**
-     * Media repository instance for accessing and managing media records.
-     */
-    const repo = await getMediaRepository()
 
-    // Fetch all series
-    const series = await repo.findByType("series")
+  const [seriesResult, moviesResult] = await Promise.all([
+    syncAllSeriesAction(false),
+    syncAllMoviesAction(false),
+  ])
 
-    /**
-     * Counter tracking the number of series that were successfully synced during this run.
-     */
-    let syncedCount = 0
-    /**
-     * The current timestamp, used to calculate the time difference since the last sync.
-     */
-    const now = new Date()
+  return NextResponse.json(
+    { ...seriesResult, moviesUpdated: moviesResult.updatedCount },
+    { status: seriesResult.success ? 200 : 500 }
+  )
+}
 
-    for (const item of series) {
-      if (!item.tmdb_id) continue
+/**
+ * On-demand POST handler for triggering a forced refresh of all series and movies
+ * regardless of last-synced time.
+ *
+ * @returns JSON response with overall sync results
+ */
+export async function POST() {
+  const [seriesResult, moviesResult] = await Promise.all([
+    syncAllSeriesAction(true),
+    syncAllMoviesAction(true),
+  ])
 
-      // If it has never been synced, or last sync was > 24 hours ago
-      let needsSync = true
-      if (item.last_synced_at) {
-        // Calculate the elapsed time in hours to prevent rate limiting from TMDB and redundant operations
-        const lastSync = new Date(item.last_synced_at)
-        const diffHours = (now.getTime() - lastSync.getTime()) / (1000 * 60 * 60)
-        if (diffHours < 24) {
-          needsSync = false
-        }
-      }
-
-      if (needsSync) {
-        // We use the existing action so all logic is centralized
-        // Note: in a huge vault, doing this sequentially in a loop could hit serverless function timeouts.
-        // For a personal vault, it is perfectly fine.
-        await syncSeriesSeasons(item.id, item.tmdb_id)
-        syncedCount++
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `Checked ${series.length} series. Synced ${syncedCount} series that were outdated.`,
-    })
-  } catch (error: unknown) {
-    console.error("[Cron] Auto-sync failed:", error)
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    )
-  }
+  return NextResponse.json(
+    { ...seriesResult, moviesUpdated: moviesResult.updatedCount },
+    { status: seriesResult.success ? 200 : 500 }
+  )
 }

@@ -343,6 +343,7 @@ export async function addMediaToVault(result: SearchResult): Promise<void> {
   let title = result.title
   let synopsis = result.synopsis
   let author = result.author
+  let director: string | null = null
   let totalPages = result.totalPages
   let releaseYear = result.releaseYear
   let genres = result.genres
@@ -356,18 +357,25 @@ export async function addMediaToVault(result: SearchResult): Promise<void> {
     /**
      * The fetch response object from the TMDB detailed item request.
      */
-    const tmdbRes = await fetch(`https://api.themoviedb.org/3${endpoint}?api_key=${TMDB_API_KEY}`)
+    const tmdbRes = await fetch(
+      `https://api.themoviedb.org/3${endpoint}?api_key=${TMDB_API_KEY}&append_to_response=credits`
+    )
 
     if (tmdbRes.ok) {
       const details = await tmdbRes.json()
       if (result.type === "movie") {
         runtimeMinutes = details.runtime
         tmdbStatus = details.status
+        director = details.credits?.crew?.find((c: any) => c.job === "Director")?.name || null
       } else {
         episodeCount = details.number_of_episodes
         seasonCount = details.number_of_seasons
         tmdbStatus = details.status
         nextEpisodeAirDate = details.next_episode_to_air?.air_date || null
+        director =
+          details.created_by?.map((c: any) => c.name).join(", ") ||
+          details.credits?.crew?.find((c: any) => c.job === "Director")?.name ||
+          null
 
         if (details.episode_run_time && details.episode_run_time.length > 0) {
           runtimeMinutes = details.episode_run_time[0]
@@ -407,6 +415,7 @@ export async function addMediaToVault(result: SearchResult): Promise<void> {
     release_year: releaseYear,
     synopsis,
     author,
+    director,
     genres,
     total_pages: totalPages,
     runtime_minutes: runtimeMinutes,
@@ -674,6 +683,98 @@ export async function syncSeriesSeasons(id: string, tmdbId: number): Promise<voi
 }
 
 /**
+ * Automatically syncs all TV series in the vault with TMDB to refresh episode counts,
+ * new seasons, air dates, and status.
+ * @param force - If true, syncs even if synced recently (<12 hours).
+ */
+export async function syncAllSeriesAction(force = false): Promise<{
+  success: boolean
+  syncedCount: number
+  totalChecked: number
+  message: string
+}> {
+  try {
+    const repo = await getMediaRepository()
+    const series = await repo.findByType("series")
+    let syncedCount = 0
+    const now = new Date()
+
+    for (const item of series) {
+      if (!item.tmdb_id) {
+        if (TMDB_API_KEY) {
+          try {
+            const searchTitle = item.title.replace(/\s*\(Season \d+\)$/i, "").trim()
+            const res = await fetch(
+              `https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(
+                searchTitle
+              )}&language=en-US&page=1`
+            )
+            if (res.ok) {
+              const data = await res.json()
+              const match = data.results?.[0]
+              if (match) {
+                await repo.update(item.id, {
+                  tmdb_id: match.id,
+                  cover_url: match.poster_path
+                    ? `https://image.tmdb.org/t/p/w500${match.poster_path}`
+                    : item.cover_url,
+                  synopsis: match.overview || item.synopsis,
+                })
+                await syncSeriesSeasons(item.id, match.id)
+                syncedCount++
+                continue
+              }
+            }
+          } catch (e) {
+            console.warn(`[SyncSeries] Auto-discovery for ${item.title}:`, e)
+          }
+        }
+        continue
+      }
+
+      let needsSync = force || !item.last_synced_at
+      if (!needsSync && item.last_synced_at) {
+        const lastSync = new Date(item.last_synced_at)
+        const diffHours = (now.getTime() - lastSync.getTime()) / (1000 * 60 * 60)
+        if (diffHours >= 12) {
+          needsSync = true
+        }
+      }
+
+      if (needsSync) {
+        try {
+          await syncSeriesSeasons(item.id, item.tmdb_id)
+          syncedCount++
+        } catch (err) {
+          console.warn(`[SyncSeries] Failed to sync ${item.title}:`, err)
+        }
+      }
+    }
+
+    revalidatePath("/series")
+    revalidatePath("/")
+
+    return {
+      success: true,
+      syncedCount,
+      totalChecked: series.length,
+      message:
+        syncedCount > 0
+          ? `Synced ${syncedCount} series with latest TMDB episodes.`
+          : `All ${series.length} series are already up to date.`,
+    }
+  } catch (error: any) {
+    console.error("[SyncSeries] Error in syncAllSeriesAction:", error)
+    return {
+      success: false,
+      syncedCount: 0,
+      totalChecked: 0,
+      message: error instanceof Error ? error.message : "Sync failed",
+    }
+  }
+}
+
+/**
  * Searches the OpenLibrary API for book metadata as a fallback when Google Books fails.
  */
 async function searchOpenLibrary(query: string) {
@@ -937,4 +1038,201 @@ export async function refreshBookDetails(id: string): Promise<{ success: boolean
   await repo.update(id, updates)
   revalidatePath("/", "layout")
   return { success: true, coverUrl: details.coverUrl }
+}
+
+/**
+ * Updates all movies in the vault with complete TMDB metadata (directors, genres, runtime, synopsis, covers).
+ *
+ * @param forceAll - Whether to force a full re-fetch even if metadata already exists.
+ * @returns Object with operation status, count of updated movies, and user message.
+ */
+export async function syncAllMoviesAction(forceAll: boolean = false): Promise<{
+  success: boolean
+  updatedCount: number
+  totalChecked: number
+  message: string
+}> {
+  if (!TMDB_API_KEY) {
+    return {
+      success: false,
+      updatedCount: 0,
+      totalChecked: 0,
+      message: "TMDB_API_KEY is not configured.",
+    }
+  }
+
+  const repo = await getMediaRepository()
+  const allMovies = await repo.findAll({ type: "movie" })
+
+  let updatedCount = 0
+
+  for (const item of allMovies) {
+    const needsUpdate =
+      forceAll ||
+      !item.director ||
+      !item.genres ||
+      item.genres.length === 0 ||
+      !item.runtime_minutes ||
+      !item.cover_url
+
+    if (!needsUpdate) continue
+
+    try {
+      let tmdbId = item.tmdb_id
+
+      if (!tmdbId) {
+        const searchRes = await fetch(
+          `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(
+            item.title
+          )}&language=en-US&page=1`
+        )
+        if (searchRes.ok) {
+          const searchData = await searchRes.json()
+          if (searchData.results?.length > 0) {
+            tmdbId = searchData.results[0].id
+          }
+        }
+      }
+
+      if (!tmdbId) continue
+
+      const res = await fetch(
+        `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`
+      )
+      if (!res.ok) continue
+
+      const details = await res.json()
+      const director = details.credits?.crew?.find((c: any) => c.job === "Director")?.name || null
+      const genres = details.genres ? details.genres.map((g: any) => g.name) : []
+      const coverUrl = details.poster_path
+        ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
+        : null
+
+      const updates: Partial<MediaItem> = {
+        tmdb_id: tmdbId,
+      }
+      if (director) updates.director = director
+      if (details.runtime && !item.runtime_minutes) updates.runtime_minutes = details.runtime
+      if (details.overview && !item.synopsis) updates.synopsis = details.overview
+      if (genres.length > 0 && (!item.genres || item.genres.length === 0)) updates.genres = genres
+      if (coverUrl && !item.cover_url) updates.cover_url = coverUrl
+      if (details.release_date && !item.release_year) {
+        updates.release_year = parseInt(details.release_date.substring(0, 4))
+      }
+      if (details.status) updates.tmdb_status = details.status
+
+      await repo.update(item.id, updates)
+      updatedCount++
+    } catch (e) {
+      console.warn(`Failed to update movie ${item.title}:`, e)
+    }
+  }
+
+  if (updatedCount > 0) {
+    revalidatePath("/movies")
+    revalidatePath("/")
+  }
+
+  return {
+    success: true,
+    updatedCount,
+    totalChecked: allMovies.length,
+    message:
+      updatedCount > 0
+        ? `Updated ${updatedCount} movies with TMDB metadata & directors.`
+        : `All ${allMovies.length} movies are already up to date.`,
+  }
+}
+
+/**
+ * Backwards-compatible export for Turbopack HMR cache.
+ *
+ * @returns Result of calling syncAllMoviesAction(false).
+ */
+export async function syncMissingDirectorsAction() {
+  return syncAllMoviesAction(false)
+}
+
+/**
+ * Refreshes an individual movie's metadata (director, genres, runtime, synopsis, artwork) from TMDB.
+ *
+ * @param id - Supabase media item UUID of the movie to refresh.
+ * @returns Object with operation status, feedback message, and updated director name.
+ */
+export async function refreshMovieMetadataAction(id: string): Promise<{
+  success: boolean
+  message: string
+  director?: string | null
+}> {
+  if (!TMDB_API_KEY) {
+    return { success: false, message: "TMDB_API_KEY is not configured." }
+  }
+
+  const repo = await getMediaRepository()
+  const item = await repo.findById(id)
+  if (!item || item.type !== "movie") {
+    return { success: false, message: "Movie not found." }
+  }
+
+  try {
+    let tmdbId = item.tmdb_id
+
+    if (!tmdbId) {
+      const searchRes = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(
+          item.title
+        )}&language=en-US&page=1`
+      )
+      if (searchRes.ok) {
+        const searchData = await searchRes.json()
+        if (searchData.results?.length > 0) {
+          tmdbId = searchData.results[0].id
+        }
+      }
+    }
+
+    if (!tmdbId) {
+      return { success: false, message: "Could not find a match on TMDB for this movie." }
+    }
+
+    const res = await fetch(
+      `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`
+    )
+    if (!res.ok) {
+      return { success: false, message: "Failed to fetch movie details from TMDB." }
+    }
+
+    const details = await res.json()
+    const director = details.credits?.crew?.find((c: any) => c.job === "Director")?.name || null
+    const genres = details.genres ? details.genres.map((g: any) => g.name) : []
+    const coverUrl = details.poster_path
+      ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
+      : null
+
+    const updates: Partial<MediaItem> = {
+      tmdb_id: tmdbId,
+    }
+    if (director) updates.director = director
+    if (details.runtime) updates.runtime_minutes = details.runtime
+    if (details.overview) updates.synopsis = details.overview
+    if (genres.length > 0) updates.genres = genres
+    if (coverUrl) updates.cover_url = coverUrl
+    if (details.release_date) {
+      updates.release_year = parseInt(details.release_date.substring(0, 4))
+    }
+    if (details.status) updates.tmdb_status = details.status
+
+    await repo.update(item.id, updates)
+    revalidatePath(`/movies/${id}`)
+    revalidatePath("/movies")
+    revalidatePath("/")
+
+    return {
+      success: true,
+      message: `Updated "${item.title}" from TMDB.`,
+      director,
+    }
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Failed to update movie." }
+  }
 }

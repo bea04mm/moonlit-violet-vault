@@ -29,7 +29,9 @@ export function AutoSyncTrigger() {
     // Wait a few seconds so it doesn't block initial page load performance
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch("/api/cron/sync-series")
+        const res = await fetch("/api/cron/sync-series", {
+          headers: { "x-internal-sync": "true" },
+        })
         const contentType = res.headers.get("content-type")
         if (!res.ok || !contentType?.includes("application/json")) {
           return
