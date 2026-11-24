@@ -20,10 +20,11 @@ import Link from "next/link"
 import { ProgressLogger } from "./ProgressLogger"
 import { DeleteButton } from "./DeleteButton"
 import { BookMatchFixer } from "./BookMatchFixer"
-import { updateMediaProgress } from "@/lib/actions/mediaActions"
+import { updateMediaProgress, refreshMovieMetadataAction } from "@/lib/actions/mediaActions"
 import FavoriteIcon from "@mui/icons-material/Favorite"
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder"
 import StarIcon from "@mui/icons-material/Star"
+import SyncIcon from "@mui/icons-material/Sync"
 import { useRouter } from "next/navigation"
 import RateReviewIcon from "@mui/icons-material/RateReview"
 import AutoStoriesIcon from "@mui/icons-material/AutoStories"
@@ -78,6 +79,29 @@ export function MediaDetail({ item }: MediaDetailProps) {
     } catch {
       toast.error("Failed to update status")
       setCurrentStatus(currentStatus)
+    }
+  }
+
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  /**
+   * Refreshes metadata for this individual movie directly from TMDB,
+   * pulling the latest director, genres, synopsis, and high-res poster artwork.
+   */
+  const handleRefreshMovie = async () => {
+    setIsRefreshing(true)
+    try {
+      const res = await refreshMovieMetadataAction(item.id)
+      if (res.success) {
+        toast.success(res.message)
+        router.refresh()
+      } else {
+        toast.error(res.message)
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update movie")
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -178,6 +202,22 @@ export function MediaDetail({ item }: MediaDetailProps) {
             </button>
 
             {item.type === "book" && <BookMatchFixer item={item} />}
+
+            {item.type === "movie" && (
+              <button
+                type="button"
+                onClick={handleRefreshMovie}
+                disabled={isRefreshing}
+                className="bg-surface hover:bg-surface-elevated border-border hover:border-primary/40 text-muted hover:text-foreground flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                title="Refresh director, genres, and artwork from TMDB"
+              >
+                <SyncIcon
+                  sx={{ fontSize: 14 }}
+                  className={isRefreshing ? "animate-spin text-primary" : "text-primary"}
+                />
+                <span>{isRefreshing ? "Updating..." : "Update from TMDB"}</span>
+              </button>
+            )}
           </div>
 
           {/* Right Column: Details */}
@@ -210,15 +250,23 @@ export function MediaDetail({ item }: MediaDetailProps) {
               </div>
             </div>
 
-            {/* Genres */}
-            {item.genres && item.genres.length > 0 && (
+            {/* Genres & Tags */}
+            {((item.genres && item.genres.length > 0) || (item.tags && item.tags.length > 0)) && (
               <div className="mt-1 flex flex-wrap gap-1.5">
-                {item.genres.map((genre) => (
+                {item.genres?.map((genre) => (
                   <span
                     key={genre}
                     className="bg-primary/10 border-primary/25 text-primary rounded-md border px-2.5 py-0.5 text-xs font-medium"
                   >
                     {genre}
+                  </span>
+                ))}
+                {item.tags?.map((tag) => (
+                  <span
+                    key={tag}
+                    className="bg-surface-elevated border-border text-muted rounded-md border px-2.5 py-0.5 text-xs font-medium"
+                  >
+                    {tag}
                   </span>
                 ))}
               </div>

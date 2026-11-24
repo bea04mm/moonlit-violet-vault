@@ -12,6 +12,10 @@ import type { MediaItem, MediaType } from "@/lib/supabase/database.types"
 import { MediaGrid } from "./MediaGrid"
 import { FormControl, Select, MenuItem } from "@mui/material"
 import { PageHeader } from "@/components/layout/PageHeader"
+import SyncIcon from "@mui/icons-material/Sync"
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"
+import { syncAllSeriesAction, syncAllMoviesAction } from "@/lib/actions/mediaActions"
+import { toast } from "sonner"
 
 /**
  * Props interface for the TabbedDashboardProps.
@@ -183,6 +187,7 @@ export function TabbedDashboard({
     "date_added"
   )
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [isTagsOpen, setIsTagsOpen] = useState(false)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -211,6 +216,43 @@ export function TabbedDashboard({
     window.scrollTo({ top: 0, behavior: "auto" })
   }
 
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const handleSyncSeries = async () => {
+    setIsSyncing(true)
+    try {
+      const res = await syncAllSeriesAction(true)
+      if (res.success) {
+        toast.success(res.message)
+      } else {
+        toast.error(res.message || "Failed to update series")
+      }
+    } catch (err: any) {
+      toast.error("Failed to update series: " + (err?.message || "Unknown error"))
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  /**
+   * Triggers a batch metadata update across all movies in the vault via TMDB API.
+   */
+  const handleSyncMovies = async () => {
+    setIsSyncing(true)
+    try {
+      const res = await syncAllMoviesAction(true)
+      if (res.success) {
+        toast.success(res.message)
+      } else {
+        toast.error(res.message || "Failed to update movies")
+      }
+    } catch (err: any) {
+      toast.error("Failed to update movies: " + (err?.message || "Unknown error"))
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   /**
    * The currently active tab configuration object based on state or URL.
    */
@@ -226,7 +268,10 @@ export function TabbedDashboard({
     let result = items.filter(activeTab.filterFn)
 
     if (selectedTags.length > 0) {
-      result = result.filter((item) => selectedTags.every((t) => (item.tags || []).includes(t)))
+      result = result.filter((item) => {
+        const itemTags = [...(item.tags || []), ...(item.genres || [])]
+        return selectedTags.every((t) => itemTags.includes(t))
+      })
     }
 
     return result.sort((a, b) => {
@@ -237,10 +282,17 @@ export function TabbedDashboard({
     })
   }, [items, activeTab, selectedTags, sortBy])
 
-  // Extract tags from the current tab's items (before filtering by tags)
-  const availableTags = Array.from(
-    new Set(items.filter(activeTab.filterFn).flatMap((item) => item.tags || []))
-  ).sort()
+  /**
+   * Aggregates all unique user tags and TMDB genres present in the currently filtered tab's items.
+   */
+  const availableTags = useMemo(() => {
+    const set = new Set<string>()
+    items.filter(activeTab.filterFn).forEach((item) => {
+      item.tags?.forEach((t) => t && set.add(t))
+      item.genres?.forEach((g) => g && set.add(g))
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [items, activeTab])
 
   const tabsControls = (
     <div className="bg-surface border-border custom-scrollbar flex w-full max-w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-xl border p-1 lg:w-auto">
@@ -269,6 +321,33 @@ export function TabbedDashboard({
       })}
 
       <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
+
+      {/* Tags Filter Toggle */}
+      {availableTags.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setIsTagsOpen((prev) => !prev)}
+            className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
+              selectedTags.length > 0 || isTagsOpen
+                ? "bg-primary/15 text-primary border-primary/35 border font-semibold shadow-xs"
+                : "text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent"
+            }`}
+          >
+            <span>Tags</span>
+            {selectedTags.length > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/25 text-primary px-1 text-[10px] font-bold">
+                {selectedTags.length}
+              </span>
+            )}
+            <KeyboardArrowDownIcon
+              sx={{ fontSize: 15 }}
+              className={`transition-transform duration-200 ${isTagsOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
+        </>
+      )}
 
       {/* Sorting Dropdown */}
       <FormControl size="small" className="shrink-0">
@@ -320,6 +399,38 @@ export function TabbedDashboard({
           <MenuItem value="user_rating">Rating (Highest)</MenuItem>
         </Select>
       </FormControl>
+
+      {type === "series" && (
+        <button
+          type="button"
+          onClick={handleSyncSeries}
+          disabled={isSyncing}
+          className="border-border text-muted hover:text-foreground hover:bg-surface-elevated/80 flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-50"
+          title="Auto-update all series with TMDB seasons and episodes"
+        >
+          <SyncIcon
+            sx={{ fontSize: 14 }}
+            className={isSyncing ? "animate-spin text-primary" : "text-primary"}
+          />
+          <span className="hidden sm:inline">{isSyncing ? "Syncing..." : "Sync Series"}</span>
+        </button>
+      )}
+
+      {type === "movie" && (
+        <button
+          type="button"
+          onClick={handleSyncMovies}
+          disabled={isSyncing}
+          className="border-border text-muted hover:text-foreground hover:bg-surface-elevated/80 flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-50"
+          title="Update all movies with TMDB metadata, directors, and posters"
+        >
+          <SyncIcon
+            sx={{ fontSize: 14 }}
+            className={isSyncing ? "animate-spin text-primary" : "text-primary"}
+          />
+          <span className="hidden sm:inline">{isSyncing ? "Updating..." : "Update Movies"}</span>
+        </button>
+      )}
     </div>
   )
 
@@ -342,9 +453,12 @@ export function TabbedDashboard({
         <div className="mb-6 w-full max-w-full min-w-0">{tabsControls}</div>
       )}
 
-      {/* Tag Filters */}
-      {availableTags.length > 0 && (
-        <div className="animate-fade-in mb-6 flex flex-wrap gap-1.5">
+      {/* Expanded Tag Filters Tray */}
+      {availableTags.length > 0 && isTagsOpen && (
+        <div className="animate-fade-in border-border bg-surface/80 mb-6 flex flex-wrap items-center gap-1.5 rounded-xl border p-2.5 shadow-2xs">
+          <span className="text-muted font-mono text-[11px] font-semibold tracking-wider uppercase mr-1">
+            Filter by tag:
+          </span>
           {availableTags.map((tag) => {
             const isSelected = selectedTags.includes(tag)
             return (
@@ -355,16 +469,25 @@ export function TabbedDashboard({
                     isSelected ? prev.filter((t) => t !== tag) : [...prev, tag]
                   )
                 }
-                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
                   isSelected
-                    ? "bg-primary/20 text-primary border-primary/40 font-medium"
+                    ? "bg-primary/20 text-primary border-primary/40 font-semibold shadow-2xs"
                     : "bg-surface text-muted border-border hover:border-primary hover:text-foreground"
                 }`}
               >
-                #{tag}
+                {tag}
               </button>
             )
           })}
+          {selectedTags.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedTags([])}
+              className="text-muted hover:text-foreground ml-auto text-xs underline cursor-pointer"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
 
