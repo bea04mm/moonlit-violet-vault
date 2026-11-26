@@ -13,6 +13,7 @@ import { createPortal } from "react-dom"
 import { deleteMediaFromVault } from "@/lib/actions/mediaActions"
 import type { MediaType } from "@/lib/supabase/database.types"
 import { toast } from "sonner"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined"
 
 /**
@@ -69,20 +70,21 @@ export function DeleteButton({ id, type }: DeleteButtonProps) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setShowConfirm(true)}
-        disabled={isDeleting}
-        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-500 shadow-xs transition-all hover:bg-red-500/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400"
-        title="Delete Item"
-        aria-label="Delete Item"
-      >
-        <DeleteOutlineIcon
-          className="text-red-500 dark:text-red-400"
-          sx={{ fontSize: 14, color: "#ef4444 !important", fill: "#ef4444 !important" }}
-        />
-        <span>{isDeleting ? "Deleting..." : "Delete"}</span>
-      </button>
+      <VaultTooltip label="Delete Item" enabled={!isDeleting} placement="top">
+        <button
+          type="button"
+          onClick={() => setShowConfirm(true)}
+          disabled={isDeleting}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-500 shadow-xs transition-all hover:bg-red-500/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400"
+          aria-label="Delete Item"
+        >
+          <DeleteOutlineIcon
+            className="text-red-500 dark:text-red-400"
+            sx={{ fontSize: 14, color: "#ef4444 !important", fill: "#ef4444 !important" }}
+          />
+          <span>{isDeleting ? "Deleting..." : "Delete"}</span>
+        </button>
+      </VaultTooltip>
 
       {isMounted &&
         showConfirm &&

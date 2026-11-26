@@ -25,6 +25,7 @@ import {
 } from "@/lib/actions/mediaActions"
 import type { MediaType, MediaItem } from "@/lib/supabase/database.types"
 import { toast } from "sonner"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 
 /**
  * Props for the AddMediaModal component.
@@ -144,14 +145,16 @@ export function AddMediaModal({ onClose }: AddMediaModalProps) {
               </h2>
               <span className="font-handwriting text-accent text-sm select-none">quick search</span>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-muted hover:text-primary hover:bg-surface-elevated cursor-pointer rounded-lg p-1.5 text-xs transition-colors"
-              aria-label="Close"
-            >
-              ✕
-            </button>
+            <VaultTooltip label="Close (Esc)" placement="left">
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-muted hover:text-primary hover:bg-surface-elevated cursor-pointer rounded-lg p-1.5 text-xs transition-colors"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </VaultTooltip>
           </div>
 
           {/* Type Selector */}

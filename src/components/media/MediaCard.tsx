@@ -24,6 +24,7 @@ import {
 } from "@/lib/utils/formatters"
 import { useState } from "react"
 import { toast } from "sonner"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 import { motion, useAnimation, type PanInfo } from "framer-motion"
 import StarIcon from "@mui/icons-material/Star"
 import CheckIcon from "@mui/icons-material/Check"
@@ -370,23 +371,24 @@ export function MediaCard({ item, disableGestures = false, priority = false }: M
                           {seasonLeft} left in season
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleQuickAddEpisode}
-                        disabled={isUpdating}
-                        className="bg-primary hover:bg-primary-hover shadow-primary/30 border-primary/40 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border text-white shadow-md transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="Mark episode as watched"
-                        aria-label="Mark episode as watched"
-                      >
-                        {isUpdating ? (
-                          <span className="text-[10px] font-bold">...</span>
-                        ) : (
-                          <CheckIcon
-                            sx={{ fontSize: 18, color: "#ffffff" }}
-                            className="text-white"
-                          />
-                        )}
-                      </button>
+                      <VaultTooltip label="Mark episode as watched" enabled={!isUpdating}>
+                        <button
+                          type="button"
+                          onClick={handleQuickAddEpisode}
+                          disabled={isUpdating}
+                          className="bg-primary hover:bg-primary-hover shadow-primary/30 border-primary/40 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border text-white shadow-md transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label="Mark episode as watched"
+                        >
+                          {isUpdating ? (
+                            <span className="text-[10px] font-bold">...</span>
+                          ) : (
+                            <CheckIcon
+                              sx={{ fontSize: 18, color: "#ffffff" }}
+                              className="text-white"
+                            />
+                          )}
+                        </button>
+                      </VaultTooltip>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1">
@@ -401,16 +403,17 @@ export function MediaCard({ item, disableGestures = false, priority = false }: M
                     </div>
                   )}
                   {isWatchingSeries && !currentS && !isDashboard && (
-                    <button
-                      type="button"
-                      onClick={handleQuickAddEpisode}
-                      disabled={isUpdating}
-                      className="bg-primary hover:bg-primary-hover shadow-primary/30 border-primary/40 flex cursor-pointer items-center justify-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Watched +1 Episode"
-                    >
-                      <AddIcon sx={{ fontSize: 16, color: "#ffffff" }} className="text-white" />
-                      <span>{isUpdating ? "..." : "1 Ep"}</span>
-                    </button>
+                    <VaultTooltip label="Watched +1 Episode" enabled={!isUpdating}>
+                      <button
+                        type="button"
+                        onClick={handleQuickAddEpisode}
+                        disabled={isUpdating}
+                        className="bg-primary hover:bg-primary-hover shadow-primary/30 border-primary/40 flex cursor-pointer items-center justify-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <AddIcon sx={{ fontSize: 16, color: "#ffffff" }} className="text-white" />
+                        <span>{isUpdating ? "..." : "1 Ep"}</span>
+                      </button>
+                    </VaultTooltip>
                   )}
                 </div>
               )}

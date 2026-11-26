@@ -31,6 +31,7 @@ import AutoStoriesIcon from "@mui/icons-material/AutoStories"
 import AccessTimeIcon from "@mui/icons-material/AccessTime"
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined"
 import { toast } from "sonner"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 import OpenInNewIcon from "@mui/icons-material/OpenInNew"
 import ReactMarkdown from "react-markdown"
 
@@ -151,16 +152,17 @@ export function MediaDetail({ item }: MediaDetailProps) {
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-              <button
-                type="button"
-                onClick={handleCycleStatus}
-                className="inline-flex cursor-pointer items-center transition-opacity hover:opacity-85 focus:outline-none"
-                title="Click to cycle status"
-              >
-                <Badge className={STATUS_COLORS[currentStatus]}>
-                  {STATUS_LABELS[currentStatus]}
-                </Badge>
-              </button>
+              <VaultTooltip label="Click to cycle status">
+                <button
+                  type="button"
+                  onClick={handleCycleStatus}
+                  className="inline-flex cursor-pointer items-center transition-opacity hover:opacity-85 focus:outline-none"
+                >
+                  <Badge className={STATUS_COLORS[currentStatus]}>
+                    {STATUS_LABELS[currentStatus]}
+                  </Badge>
+                </button>
+              </VaultTooltip>
               <Badge className={TYPE_COLORS[item.type]}>{TYPE_LABELS[item.type]}</Badge>
               {item.user_rating && (
                 <Badge variant="glass" className="gap-1.5">
@@ -204,19 +206,23 @@ export function MediaDetail({ item }: MediaDetailProps) {
             {item.type === "book" && <BookMatchFixer item={item} />}
 
             {item.type === "movie" && (
-              <button
-                type="button"
-                onClick={handleRefreshMovie}
-                disabled={isRefreshing}
-                className="bg-surface hover:bg-surface-elevated border-border hover:border-primary/40 text-muted hover:text-foreground flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold shadow-xs transition-all active:scale-95 disabled:opacity-50"
-                title="Refresh director, genres, and artwork from TMDB"
+              <VaultTooltip
+                label="Refresh director, genres, and artwork from TMDB"
+                enabled={!isRefreshing}
               >
-                <SyncIcon
-                  sx={{ fontSize: 14 }}
-                  className={isRefreshing ? "animate-spin text-primary" : "text-primary"}
-                />
-                <span>{isRefreshing ? "Updating..." : "Update from TMDB"}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleRefreshMovie}
+                  disabled={isRefreshing}
+                  className="bg-surface hover:bg-surface-elevated border-border hover:border-primary/40 text-muted hover:text-foreground flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-semibold shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <SyncIcon
+                    sx={{ fontSize: 14 }}
+                    className={isRefreshing ? "text-primary animate-spin" : "text-primary"}
+                  />
+                  <span>{isRefreshing ? "Updating..." : "Update from TMDB"}</span>
+                </button>
+              </VaultTooltip>
             )}
           </div>
 

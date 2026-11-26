@@ -16,6 +16,7 @@ import SyncIcon from "@mui/icons-material/Sync"
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"
 import { syncAllSeriesAction, syncAllMoviesAction } from "@/lib/actions/mediaActions"
 import { toast } from "sonner"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 
 /**
  * Props interface for the TabbedDashboardProps.
@@ -336,7 +337,7 @@ export function TabbedDashboard({
           >
             <span>Tags</span>
             {selectedTags.length > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/25 text-primary px-1 text-[10px] font-bold">
+              <span className="bg-primary/25 text-primary flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">
                 {selectedTags.length}
               </span>
             )}
@@ -401,35 +402,45 @@ export function TabbedDashboard({
       </FormControl>
 
       {type === "series" && (
-        <button
-          type="button"
-          onClick={handleSyncSeries}
-          disabled={isSyncing}
-          className="border-border text-muted hover:text-foreground hover:bg-surface-elevated/80 flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-50"
-          title="Auto-update all series with TMDB seasons and episodes"
+        <VaultTooltip
+          label="Auto-update all series with TMDB seasons and episodes"
+          enabled={!isSyncing}
+          placement="bottom"
         >
-          <SyncIcon
-            sx={{ fontSize: 14 }}
-            className={isSyncing ? "animate-spin text-primary" : "text-primary"}
-          />
-          <span className="hidden sm:inline">{isSyncing ? "Syncing..." : "Sync Series"}</span>
-        </button>
+          <button
+            type="button"
+            onClick={handleSyncSeries}
+            disabled={isSyncing}
+            className="border-border text-muted hover:text-foreground hover:bg-surface-elevated/80 flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-50"
+          >
+            <SyncIcon
+              sx={{ fontSize: 14 }}
+              className={isSyncing ? "text-primary animate-spin" : "text-primary"}
+            />
+            <span className="hidden sm:inline">{isSyncing ? "Syncing..." : "Sync Series"}</span>
+          </button>
+        </VaultTooltip>
       )}
 
       {type === "movie" && (
-        <button
-          type="button"
-          onClick={handleSyncMovies}
-          disabled={isSyncing}
-          className="border-border text-muted hover:text-foreground hover:bg-surface-elevated/80 flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-50"
-          title="Update all movies with TMDB metadata, directors, and posters"
+        <VaultTooltip
+          label="Update all movies with TMDB metadata, directors, and posters"
+          enabled={!isSyncing}
+          placement="bottom"
         >
-          <SyncIcon
-            sx={{ fontSize: 14 }}
-            className={isSyncing ? "animate-spin text-primary" : "text-primary"}
-          />
-          <span className="hidden sm:inline">{isSyncing ? "Updating..." : "Update Movies"}</span>
-        </button>
+          <button
+            type="button"
+            onClick={handleSyncMovies}
+            disabled={isSyncing}
+            className="border-border text-muted hover:text-foreground hover:bg-surface-elevated/80 flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-50"
+          >
+            <SyncIcon
+              sx={{ fontSize: 14 }}
+              className={isSyncing ? "text-primary animate-spin" : "text-primary"}
+            />
+            <span className="hidden sm:inline">{isSyncing ? "Updating..." : "Update Movies"}</span>
+          </button>
+        </VaultTooltip>
       )}
     </div>
   )
@@ -456,7 +467,7 @@ export function TabbedDashboard({
       {/* Expanded Tag Filters Tray */}
       {availableTags.length > 0 && isTagsOpen && (
         <div className="animate-fade-in border-border bg-surface/80 mb-6 flex flex-wrap items-center gap-1.5 rounded-xl border p-2.5 shadow-2xs">
-          <span className="text-muted font-mono text-[11px] font-semibold tracking-wider uppercase mr-1">
+          <span className="text-muted mr-1 font-mono text-[11px] font-semibold tracking-wider uppercase">
             Filter by tag:
           </span>
           {availableTags.map((tag) => {
@@ -469,7 +480,7 @@ export function TabbedDashboard({
                     isSelected ? prev.filter((t) => t !== tag) : [...prev, tag]
                   )
                 }
-                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                className={`cursor-pointer rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
                   isSelected
                     ? "bg-primary/20 text-primary border-primary/40 font-semibold shadow-2xs"
                     : "bg-surface text-muted border-border hover:border-primary hover:text-foreground"
@@ -483,7 +494,7 @@ export function TabbedDashboard({
             <button
               type="button"
               onClick={() => setSelectedTags([])}
-              className="text-muted hover:text-foreground ml-auto text-xs underline cursor-pointer"
+              className="text-muted hover:text-foreground ml-auto cursor-pointer text-xs underline"
             >
               Clear filters
             </button>

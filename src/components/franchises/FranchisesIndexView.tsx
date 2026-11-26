@@ -23,6 +23,7 @@ import { toast } from "sonner"
 import { AddFranchiseModal } from "./AddFranchiseModal"
 import { deleteCustomFranchiseAction } from "@/lib/actions/franchiseAiActions"
 import { PageHeader } from "@/components/layout/PageHeader"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 
 /**
  * View model representing a franchise card rendered on the Franchises Hub.
@@ -89,9 +90,18 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
   }, [franchises, searchQuery])
 
   // Aggregated totals
-  const totalTitles = useMemo(() => franchises.reduce((acc, f) => acc + f.totalCount, 0), [franchises])
-  const totalInVault = useMemo(() => franchises.reduce((acc, f) => acc + f.inVaultCount, 0), [franchises])
-  const totalWatched = useMemo(() => franchises.reduce((acc, f) => acc + f.watchedCount, 0), [franchises])
+  const totalTitles = useMemo(
+    () => franchises.reduce((acc, f) => acc + f.totalCount, 0),
+    [franchises]
+  )
+  const totalInVault = useMemo(
+    () => franchises.reduce((acc, f) => acc + f.inVaultCount, 0),
+    [franchises]
+  )
+  const totalWatched = useMemo(
+    () => franchises.reduce((acc, f) => acc + f.watchedCount, 0),
+    [franchises]
+  )
   const totalHours = useMemo(
     () => Math.round(franchises.reduce((acc, f) => acc + f.totalMinutes, 0) / 60),
     [franchises]
@@ -123,7 +133,7 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
   }
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
+    <div className="animate-fade-in space-y-8 pb-16">
       {/* Standardized Header Section */}
       <PageHeader
         title="Franchises"
@@ -133,7 +143,7 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-primary hover:bg-primary/90 text-primary-fg inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer"
+            className="bg-primary hover:bg-primary/90 text-primary-fg inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold shadow-xs transition-all active:scale-95"
           >
             <AddIcon sx={{ fontSize: 18 }} />
             <span>Add Franchise</span>
@@ -162,7 +172,9 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
           <div className="font-display text-foreground mt-1 text-2xl font-extrabold sm:text-3xl">
             {totalTitles}
           </div>
-          <div className="text-muted mt-1 text-[11px] font-medium">Chronological checklist titles</div>
+          <div className="text-muted mt-1 text-[11px] font-medium">
+            Chronological checklist titles
+          </div>
         </div>
 
         <div className="border-border bg-surface rounded-2xl border p-4 shadow-2xs">
@@ -196,14 +208,14 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
       <div className="relative">
         <SearchIcon
           sx={{ fontSize: 18 }}
-          className="text-muted absolute top-1/2 left-3.5 -translate-y-1/2 pointer-events-none"
+          className="text-muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2"
         />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter franchises by name, studio, or tagline..."
-          className="bg-surface border-border text-foreground placeholder:text-muted/60 focus:border-primary/50 focus:ring-primary/20 w-full rounded-xl border py-2.5 pr-4 pl-10 text-xs font-medium shadow-2xs transition-all focus:outline-hidden focus:ring-2"
+          className="bg-surface border-border text-foreground placeholder:text-muted/60 focus:border-primary/50 focus:ring-primary/20 w-full rounded-xl border py-2.5 pr-4 pl-10 text-xs font-medium shadow-2xs transition-all focus:ring-2 focus:outline-hidden"
         />
       </div>
 
@@ -211,8 +223,8 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
       {filtered.length === 0 ? (
         <div className="border-border bg-surface/50 flex flex-col items-center justify-center rounded-2xl border border-dashed py-16 text-center">
           <HubIcon sx={{ fontSize: 40 }} className="text-muted/40 mb-3" />
-          <h3 className="text-foreground font-semibold text-sm">No franchises found</h3>
-          <p className="text-muted mt-1 text-xs max-w-sm">
+          <h3 className="text-foreground text-sm font-semibold">No franchises found</h3>
+          <p className="text-muted mt-1 max-w-sm text-xs">
             {searchQuery
               ? `No franchises matched "${searchQuery}". Clear your search or create a new franchise.`
               : "No franchises have been added yet."}
@@ -221,7 +233,8 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((f) => {
-            const watchedPct = f.totalCount > 0 ? Math.round((f.watchedCount / f.totalCount) * 100) : 0
+            const watchedPct =
+              f.totalCount > 0 ? Math.round((f.watchedCount / f.totalCount) * 100) : 0
 
             return (
               <Link
@@ -231,13 +244,13 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
               >
                 {/* Accent top stripe */}
                 <div
-                  className="absolute top-0 left-0 right-0 h-1.25 transition-all group-hover:h-1.5"
+                  className="absolute top-0 right-0 left-0 h-1.25 transition-all group-hover:h-1.5"
                   style={{ backgroundColor: f.accentColor }}
                 />
 
                 <div>
                   {/* Card Header */}
-                  <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="mb-3 flex items-center justify-between gap-2">
                     <span
                       className="inline-flex items-center rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase shadow-2xs"
                       style={{
@@ -251,20 +264,22 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
                     <div className="flex items-center gap-1.5">
                       {f.isCustom ? (
                         <>
-                          <span className="text-[10px] font-medium text-muted bg-surface-elevated border border-border px-1.5 py-0.5 rounded-sm">
+                          <span className="text-muted bg-surface-elevated border-border rounded-sm border px-1.5 py-0.5 text-[10px] font-medium">
                             Custom
                           </span>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDelete(e, f)}
-                            className="text-muted hover:text-red-400 p-1 transition-colors rounded-sm hover:bg-red-500/10 cursor-pointer"
-                            title={`Delete ${f.shortName} franchise`}
-                          >
-                            <DeleteIcon sx={{ fontSize: 15 }} />
-                          </button>
+                          <VaultTooltip label={`Delete ${f.shortName} franchise`}>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDelete(e, f)}
+                              className="text-muted cursor-pointer rounded-sm p-1 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                              aria-label={`Delete ${f.shortName} franchise`}
+                            >
+                              <DeleteIcon sx={{ fontSize: 15 }} />
+                            </button>
+                          </VaultTooltip>
                         </>
                       ) : (
-                        <span className="text-[10px] font-medium text-muted bg-surface-elevated border border-border px-1.5 py-0.5 rounded-sm">
+                        <span className="text-muted bg-surface-elevated border-border rounded-sm border px-1.5 py-0.5 text-[10px] font-medium">
                           Canon
                         </span>
                       )}
@@ -272,11 +287,12 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
                   </div>
 
                   {/* Title & Tagline */}
-                  <h3 className="text-foreground group-hover:text-primary font-display text-lg font-bold leading-snug transition-colors line-clamp-1">
+                  <h3 className="text-foreground group-hover:text-primary font-display line-clamp-1 text-lg leading-snug font-bold transition-colors">
                     {f.name}
                   </h3>
-                  <p className="text-muted mt-1.5 text-xs line-clamp-2 leading-relaxed">
-                    {f.tagline || "Comprehensive chronological viewing order and timeline archives."}
+                  <p className="text-muted mt-1.5 line-clamp-2 text-xs leading-relaxed">
+                    {f.tagline ||
+                      "Comprehensive chronological viewing order and timeline archives."}
                   </p>
 
                   {/* Thumbnail Poster Preview Strip */}
@@ -287,36 +303,34 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
                           key={idx}
                           src={cover}
                           alt=""
-                          className="h-16 w-11 shrink-0 rounded-md border border-border/60 object-cover shadow-2xs transition-transform group-hover:scale-102"
+                          className="border-border/60 h-16 w-11 shrink-0 rounded-md border object-cover shadow-2xs transition-transform group-hover:scale-102"
                           loading="lazy"
                         />
                       ))}
                       {f.totalCount > 4 && (
-                        <div className="h-16 w-11 shrink-0 rounded-md border border-dashed border-border bg-surface-elevated/70 flex items-center justify-center text-[10px] font-mono text-muted">
+                        <div className="border-border bg-surface-elevated/70 text-muted flex h-16 w-11 shrink-0 items-center justify-center rounded-md border border-dashed font-mono text-[10px]">
                           +{f.totalCount - 4}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="mt-4 flex h-16 items-center justify-center rounded-md border border-dashed border-border/60 bg-surface-elevated/40 text-[11px] text-muted font-mono">
+                    <div className="border-border/60 bg-surface-elevated/40 text-muted mt-4 flex h-16 items-center justify-center rounded-md border border-dashed font-mono text-[11px]">
                       {f.totalCount} chronological titles
                     </div>
                   )}
                 </div>
 
                 {/* Progress & Card Footer */}
-                <div className="mt-5 space-y-3 pt-3 border-t border-border/50">
+                <div className="border-border/50 mt-5 space-y-3 border-t pt-3">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted font-medium">
                       {f.inVaultCount} of {f.totalCount} in Vault
                     </span>
-                    <span className="text-foreground font-semibold">
-                      {watchedPct}% watched
-                    </span>
+                    <span className="text-foreground font-semibold">{watchedPct}% watched</span>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="bg-surface-elevated h-1.5 w-full overflow-hidden rounded-full border border-border/40">
+                  <div className="bg-surface-elevated border-border/40 h-1.5 w-full overflow-hidden rounded-full border">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
@@ -326,12 +340,12 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
                     />
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 text-xs font-semibold text-primary group-hover:text-primary-hover">
-                    <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <div className="text-primary group-hover:text-primary-hover flex items-center justify-between pt-1 text-xs font-semibold">
+                    <span className="text-muted inline-flex items-center gap-1 text-[11px]">
                       <AccessTimeIcon sx={{ fontSize: 13 }} />
                       {Math.round(f.totalMinutes / 60)} hrs
                     </span>
-                    <span className="inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    <span className="inline-flex items-center gap-1 transition-transform group-hover:translate-x-0.5">
                       <span>View Checklist</span>
                       <ArrowForwardIcon sx={{ fontSize: 14 }} />
                     </span>

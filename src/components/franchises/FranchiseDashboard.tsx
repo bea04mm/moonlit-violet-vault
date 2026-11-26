@@ -10,10 +10,7 @@
 import { useState, useMemo, useTransition, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import {
-  FranchiseItem,
-  parseChecklistMarkdown,
-} from "@/data/franchises/franchiseData"
+import { FranchiseItem, parseChecklistMarkdown } from "@/data/franchises/franchiseData"
 import {
   FranchiseVaultItem,
   populateFranchiseToVaultAction,
@@ -55,6 +52,7 @@ import EditIcon from "@mui/icons-material/Edit"
 import ArrowBackIcon from "@mui/icons-material/ArrowBack"
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"
 import { PageHeader } from "@/components/layout/PageHeader"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 
 /**
  * Component props for {@link FranchiseDashboard}.
@@ -170,9 +168,7 @@ export function FranchiseDashboard({
   })
   const [universe, setUniverse] = useState<string>(initialUniverse || "marvel")
   const [items, setItems] = useState<Record<string, FranchiseVaultItem[]>>(initialData)
-  const [inVaultCounts, setInVaultCounts] = useState<Record<string, number>>(
-    initialInVaultCounts
-  )
+  const [inVaultCounts, setInVaultCounts] = useState<Record<string, number>>(initialInVaultCounts)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "watched" | "unwatched" | "upcoming">(
     "all"
@@ -190,14 +186,15 @@ export function FranchiseDashboard({
   const [aiTab, setAiTab] = useState<"ai" | "markdown">("ai")
   const [isPending, startTransition] = useTransition()
 
-  const currentFranchise = franchises.find((f) => f.id === universe) || franchises[0] || {
-    id: universe,
-    name: universe,
-    shortName: universe,
-    tagline: "",
-    accentColor: "#8B6CE8",
-    isCustom: false,
-  }
+  const currentFranchise = franchises.find((f) => f.id === universe) ||
+    franchises[0] || {
+      id: universe,
+      name: universe,
+      shortName: universe,
+      tagline: "",
+      accentColor: "#8B6CE8",
+      isCustom: false,
+    }
   const currentList = items[universe] || []
   const currentInVaultCount = inVaultCounts[universe] || 0
   const isMarvel = universe === "marvel"
@@ -205,7 +202,8 @@ export function FranchiseDashboard({
 
   // Handle custom franchise deletion
   const handleDeleteCustomFranchise = (id: string) => {
-    if (!confirm(`Are you sure you want to delete the "${currentFranchise.shortName}" franchise?`)) return
+    if (!confirm(`Are you sure you want to delete the "${currentFranchise.shortName}" franchise?`))
+      return
 
     startTransition(async () => {
       const res = await deleteCustomFranchiseAction(id)
@@ -386,9 +384,7 @@ export function FranchiseDashboard({
     if (!aiResult?.dateUpdates || aiResult.dateUpdates.length === 0) return
 
     setItems((prev) => {
-      const updatesMap = new Map(
-        aiResult.dateUpdates.map((u) => [u.title.toLowerCase().trim(), u])
-      )
+      const updatesMap = new Map(aiResult.dateUpdates.map((u) => [u.title.toLowerCase().trim(), u]))
       let count = 0
 
       const updated = prev[universe].map((item) => {
@@ -527,22 +523,26 @@ export function FranchiseDashboard({
       <div className="flex items-center justify-between">
         <Link
           href="/franchises"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-foreground transition-colors group px-3 py-1.5 rounded-xl border border-border bg-surface/70 hover:bg-surface shadow-2xs"
+          className="text-muted hover:text-foreground group border-border bg-surface/70 hover:bg-surface inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-2xs transition-colors"
         >
-          <ArrowBackIcon sx={{ fontSize: 16 }} className="transition-transform group-hover:-translate-x-0.5" />
+          <ArrowBackIcon
+            sx={{ fontSize: 16 }}
+            className="transition-transform group-hover:-translate-x-0.5"
+          />
           <span>All Franchises</span>
         </Link>
 
         {currentFranchise.isCustom && (
-          <button
-            type="button"
-            onClick={() => handleDeleteCustomFranchise(currentFranchise.id)}
-            className="text-muted hover:text-red-400 text-xs inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/70 hover:border-red-500/30 transition-colors cursor-pointer"
-            title={`Delete ${currentFranchise.shortName} franchise`}
-          >
-            <DeleteIcon sx={{ fontSize: 15 }} />
-            <span>Delete Franchise</span>
-          </button>
+          <VaultTooltip label={`Delete ${currentFranchise.shortName} franchise`} placement="bottom">
+            <button
+              type="button"
+              onClick={() => handleDeleteCustomFranchise(currentFranchise.id)}
+              className="text-muted border-border/70 inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1 text-xs transition-colors hover:border-red-500/30 hover:text-red-400"
+            >
+              <DeleteIcon sx={{ fontSize: 15 }} />
+              <span>Delete Franchise</span>
+            </button>
+          </VaultTooltip>
         )}
       </div>
 
@@ -550,26 +550,34 @@ export function FranchiseDashboard({
       <PageHeader
         title={currentFranchise.name}
         accent={currentFranchise.shortName.toLowerCase()}
-        description={currentFranchise.tagline || `Master chronological viewing guide for ${currentFranchise.name}.`}
+        description={
+          currentFranchise.tagline ||
+          `Master chronological viewing guide for ${currentFranchise.name}.`
+        }
         action={
           <div className="flex flex-wrap items-center gap-2">
             {/* Enrich via TMDB API */}
-            <button
-              onClick={handleEnrichTmdb}
-              disabled={isPending}
-              className="border-border bg-surface-elevated/70 text-foreground hover:border-primary/40 flex shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all hover:bg-violet-500/10 active:scale-95 disabled:opacity-50 cursor-pointer"
-              title="Enrich titles with official TMDB posters, cast, runtimes, and episodes"
+            <VaultTooltip
+              label="Enrich titles with official TMDB posters, cast, runtimes, and episodes"
+              enabled={!isPending}
+              placement="bottom"
             >
-              <AutoAwesomeIcon sx={{ fontSize: 15 }} className="text-[#8B6CE8]" />
-              <span>{isPending ? "Enriching..." : "Enrich via TMDB"}</span>
-            </button>
+              <button
+                onClick={handleEnrichTmdb}
+                disabled={isPending}
+                className="border-border bg-surface-elevated/70 text-foreground hover:border-primary/40 flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all hover:bg-violet-500/10 active:scale-95 disabled:opacity-50"
+              >
+                <AutoAwesomeIcon sx={{ fontSize: 15 }} className="text-[#8B6CE8]" />
+                <span>{isPending ? "Enriching..." : "Enrich via TMDB"}</span>
+              </button>
+            </VaultTooltip>
 
             {/* Populate to Vault */}
             {!allConnected && (
               <button
                 onClick={handlePopulateToVault}
                 disabled={isPending}
-                className="bg-primary hover:bg-primary/90 text-primary-fg flex shrink-0 items-center justify-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="bg-primary hover:bg-primary/90 text-primary-fg flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all active:scale-95 disabled:opacity-50"
               >
                 <CloudUploadIcon sx={{ fontSize: 15 }} />
                 <span>{isPending ? "Connecting..." : `Populate to Vault`}</span>
@@ -577,31 +585,40 @@ export function FranchiseDashboard({
             )}
 
             {/* AI Sync Button */}
-            <button
-              onClick={handleRunAiSync}
-              disabled={isPending}
-              className="border-border bg-surface-elevated/70 text-foreground hover:border-primary/40 flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all hover:bg-violet-500/10 active:scale-95 disabled:opacity-50 cursor-pointer"
-              title="Connect with Gemini AI worker to check for new releases and calendar changes"
+            <VaultTooltip
+              label="Connect with Gemini AI worker to check for new releases and calendar changes"
+              enabled={!isPending}
+              placement="bottom"
             >
-              <AutoAwesomeIcon sx={{ fontSize: 15 }} className="text-[#8B6CE8]" />
-              <span>AI Slate Sync</span>
-            </button>
+              <button
+                onClick={handleRunAiSync}
+                disabled={isPending}
+                className="border-border bg-surface-elevated/70 text-foreground hover:border-primary/40 flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all hover:bg-violet-500/10 active:scale-95 disabled:opacity-50"
+              >
+                <AutoAwesomeIcon sx={{ fontSize: 15 }} className="text-[#8B6CE8]" />
+                <span>AI Slate Sync</span>
+              </button>
+            </VaultTooltip>
 
             {/* Export Markdown Button */}
-            <button
-              onClick={() => setIsExportOpen(true)}
-              className="border-border text-muted hover:text-foreground hover:bg-surface-elevated flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer"
-              title="Export checklist to Markdown for Obsidian / VS Code"
+            <VaultTooltip
+              label="Export checklist to Markdown for Obsidian / VS Code"
+              placement="bottom"
             >
-              <DownloadIcon sx={{ fontSize: 15 }} />
-              <span>Export MD</span>
-            </button>
+              <button
+                onClick={() => setIsExportOpen(true)}
+                className="border-border text-muted hover:text-foreground hover:bg-surface-elevated flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors"
+              >
+                <DownloadIcon sx={{ fontSize: 15 }} />
+                <span>Export MD</span>
+              </button>
+            </VaultTooltip>
           </div>
         }
       />
 
       {/* 4-Card Stats Dashboard */}
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4 sm:gap-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         {/* Card 1: Total Titles */}
         <div className="border-border bg-surface rounded-2xl border p-4 shadow-2xs">
           <div className="text-muted flex items-center justify-between text-xs font-semibold tracking-wider uppercase">
@@ -625,9 +642,7 @@ export function FranchiseDashboard({
           <div className="font-display mt-1 text-2xl font-extrabold text-[#9B72CF] sm:text-3xl">
             {stats.watchedCount}
           </div>
-          <div className="text-muted mt-1 text-[11px] font-medium">
-            {stats.remaining} remaining
-          </div>
+          <div className="text-muted mt-1 text-[11px] font-medium">{stats.remaining} remaining</div>
         </div>
 
         {/* Card 3: Watch Time */}
@@ -639,9 +654,7 @@ export function FranchiseDashboard({
           <div className="font-display text-foreground mt-1 text-xl font-bold sm:text-2xl">
             {formatRuntime(stats.totalMinutes)}
           </div>
-          <div className="text-muted mt-1 text-[11px] font-medium">
-            Logged viewing duration
-          </div>
+          <div className="text-muted mt-1 text-[11px] font-medium">Logged viewing duration</div>
         </div>
 
         {/* Card 4: Completion % */}
@@ -698,7 +711,7 @@ export function FranchiseDashboard({
                     onClick={() => setStatusFilter(status)}
                     className={`rounded-lg px-2.5 py-1 text-xs capitalize transition-all ${
                       isActive
-                        ? "bg-surface text-foreground border-border font-bold shadow-2xs border"
+                        ? "bg-surface text-foreground border-border border font-bold shadow-2xs"
                         : "text-muted hover:text-foreground"
                     }`}
                   >
@@ -708,21 +721,22 @@ export function FranchiseDashboard({
               })}
             </div>
 
-            <button
-              onClick={handleResetProgress}
-              className="text-muted hover:text-rose-400 flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors"
-              title="Reset current checklist"
-            >
-              <RestartAltIcon sx={{ fontSize: 16 }} />
-              <span className="hidden md:inline">Reset</span>
-            </button>
+            <VaultTooltip label="Reset current checklist">
+              <button
+                onClick={handleResetProgress}
+                className="text-muted flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors hover:text-rose-400"
+              >
+                <RestartAltIcon sx={{ fontSize: 16 }} />
+                <span className="hidden md:inline">Reset</span>
+              </button>
+            </VaultTooltip>
           </div>
         </div>
 
         {/* Sort Order Selector & Add Title Action */}
         <div className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted font-mono text-[11px] font-semibold tracking-wider uppercase flex items-center gap-1">
+            <span className="text-muted flex items-center gap-1 font-mono text-[11px] font-semibold tracking-wider uppercase">
               <SortIcon sx={{ fontSize: 14 }} />
               Sort Order:
             </span>
@@ -732,7 +746,7 @@ export function FranchiseDashboard({
                 onClick={() => setSortBy("year-asc")}
                 className={`rounded-lg px-2.5 py-1 text-xs transition-all ${
                   sortBy === "year-asc"
-                    ? "bg-surface text-foreground border-border font-bold shadow-2xs border"
+                    ? "bg-surface text-foreground border-border border font-bold shadow-2xs"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -743,7 +757,7 @@ export function FranchiseDashboard({
                 onClick={() => setSortBy("year-desc")}
                 className={`rounded-lg px-2.5 py-1 text-xs transition-all ${
                   sortBy === "year-desc"
-                    ? "bg-surface text-foreground border-border font-bold shadow-2xs border"
+                    ? "bg-surface text-foreground border-border border font-bold shadow-2xs"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -754,7 +768,7 @@ export function FranchiseDashboard({
                 onClick={() => setSortBy("catalog")}
                 className={`rounded-lg px-2.5 py-1 text-xs transition-all ${
                   sortBy === "catalog"
-                    ? "bg-surface text-foreground border-border font-bold shadow-2xs border"
+                    ? "bg-surface text-foreground border-border border font-bold shadow-2xs"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -766,15 +780,13 @@ export function FranchiseDashboard({
             <button
               type="button"
               onClick={() => setIsErasOpen((prev) => !prev)}
-              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+              className={`inline-flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
                 selectedEra !== "all" || isErasOpen
-                  ? "bg-surface text-foreground border-border shadow-2xs font-bold"
+                  ? "bg-surface text-foreground border-border font-bold shadow-2xs"
                   : "bg-background border-border text-muted hover:text-foreground hover:border-primary/40"
               }`}
             >
-              <span className="font-mono text-[11px] uppercase tracking-wider">
-                Era Filter
-              </span>
+              <span className="font-mono text-[11px] tracking-wider uppercase">Era Filter</span>
               {selectedEra !== "all" && (
                 <span
                   className="rounded-full px-2 py-0.5 font-mono text-[10px] font-bold"
@@ -794,23 +806,24 @@ export function FranchiseDashboard({
           </div>
 
           {/* + Add Title Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setEditingItem(null)
-              setIsAddTitleOpen(true)
-            }}
-            className="bg-primary hover:bg-primary/90 text-primary-fg flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all active:scale-95 ml-auto sm:ml-0"
-            title="Add a new film, series season, or milestone to this checklist"
-          >
-            <AddIcon sx={{ fontSize: 15 }} />
-            <span>Add Title</span>
-          </button>
+          <VaultTooltip label="Add a new film, series season, or milestone to this checklist">
+            <button
+              type="button"
+              onClick={() => {
+                setEditingItem(null)
+                setIsAddTitleOpen(true)
+              }}
+              className="bg-primary hover:bg-primary/90 text-primary-fg ml-auto flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold shadow-2xs transition-all active:scale-95 sm:ml-0"
+            >
+              <AddIcon sx={{ fontSize: 15 }} />
+              <span>Add Title</span>
+            </button>
+          </VaultTooltip>
         </div>
 
         {/* Era Filter Drawer (revealed only when toggled open) */}
         {isErasOpen && (
-          <div className="animate-fade-in border-border border-t pt-3 space-y-2">
+          <div className="animate-fade-in border-border space-y-2 border-t pt-3">
             <div className="flex items-center justify-between">
               <span className="text-muted font-mono text-[11px] font-semibold tracking-wider uppercase">
                 Filter Era / Sub-Universe
@@ -819,7 +832,7 @@ export function FranchiseDashboard({
                 <button
                   type="button"
                   onClick={() => setSelectedEra("all")}
-                  className="text-[11px] text-muted hover:text-foreground transition-colors cursor-pointer"
+                  className="text-muted hover:text-foreground cursor-pointer text-[11px] transition-colors"
                 >
                   Reset to All Eras
                 </button>
@@ -836,15 +849,13 @@ export function FranchiseDashboard({
                     key={era}
                     onClick={() => setSelectedEra(era)}
                     title={era}
-                    className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
+                    className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-medium transition-all ${
                       isSelected
-                        ? "text-white shadow-xs font-semibold"
+                        ? "font-semibold text-white shadow-xs"
                         : "bg-background border-border text-muted hover:text-foreground"
                     }`}
                     style={
-                      isSelected
-                        ? { backgroundColor: brandColor, borderColor: brandColor }
-                        : {}
+                      isSelected ? { backgroundColor: brandColor, borderColor: brandColor } : {}
                     }
                   >
                     {label}
@@ -878,7 +889,10 @@ export function FranchiseDashboard({
           {filteredItems.map((item, idx) => {
             const isUpcoming = item.isUpcoming || item.year >= 2026
             const isSeries = item.vaultType === "series"
-            const vaultHref = item.inVault && item.vaultId ? `/${isSeries ? "series" : "movies"}/${item.vaultId}` : null
+            const vaultHref =
+              item.inVault && item.vaultId
+                ? `/${isSeries ? "series" : "movies"}/${item.vaultId}`
+                : null
 
             return (
               <div
@@ -903,21 +917,25 @@ export function FranchiseDashboard({
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       {vaultHref ? (
-                        <Link
-                          href={vaultHref}
-                          className={`text-xs sm:text-sm tracking-tight transition-colors hover:text-primary flex items-center gap-1.5 ${
-                            item.watched
-                              ? "text-muted font-medium"
-                              : "text-foreground font-semibold"
-                          }`}
-                          title={`View in Vault (${isSeries ? "Series" : "Movies"})`}
-                        >
-                          <span>{item.title}</span>
-                          <OpenInNewIcon sx={{ fontSize: 13 }} className="text-muted/60 hover:text-primary" />
-                        </Link>
+                        <VaultTooltip label={`View in Vault (${isSeries ? "Series" : "Movies"})`}>
+                          <Link
+                            href={vaultHref}
+                            className={`hover:text-primary flex items-center gap-1.5 text-xs tracking-tight transition-colors sm:text-sm ${
+                              item.watched
+                                ? "text-muted font-medium"
+                                : "text-foreground font-semibold"
+                            }`}
+                          >
+                            <span>{item.title}</span>
+                            <OpenInNewIcon
+                              sx={{ fontSize: 13 }}
+                              className="text-muted/60 hover:text-primary"
+                            />
+                          </Link>
+                        </VaultTooltip>
                       ) : (
                         <span
-                          className={`text-xs sm:text-sm tracking-tight transition-colors ${
+                          className={`text-xs tracking-tight transition-colors sm:text-sm ${
                             item.watched
                               ? "text-muted font-medium"
                               : "text-foreground font-semibold"
@@ -961,24 +979,29 @@ export function FranchiseDashboard({
                 {/* Right: TMDB Matcher, Vault Badge, Runtime & Interactive Checkbox */}
                 <div className="flex shrink-0 items-center gap-2.5 sm:gap-5">
                   {/* TMDB Linker Button */}
-                  <button
-                    type="button"
-                    onClick={() => setLinkingItem(item)}
-                    className={`flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] font-semibold transition-all ${
-                      item.tmdbId
-                        ? "border-border bg-background text-muted hover:border-primary/50 hover:text-foreground"
-                        : "border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-                    }`}
-                    title={
+                  <VaultTooltip
+                    label={
                       item.tmdbId
                         ? `Connected to TMDB #${item.tmdbId} (Click to re-match or disconnect)`
                         : "Click to connect to TMDB"
                     }
                   >
-                    <LinkIcon sx={{ fontSize: 13 }} />
-                    <span className="hidden sm:inline">{item.tmdbId ? `#${item.tmdbId}` : "Connect TMDB"}</span>
-                    <span className="sm:hidden">{item.tmdbId ? "TMDB" : "Link"}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setLinkingItem(item)}
+                      className={`flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] font-semibold transition-all ${
+                        item.tmdbId
+                          ? "border-border bg-background text-muted hover:border-primary/50 hover:text-foreground"
+                          : "border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                      }`}
+                    >
+                      <LinkIcon sx={{ fontSize: 13 }} />
+                      <span className="hidden sm:inline">
+                        {item.tmdbId ? `#${item.tmdbId}` : "Connect TMDB"}
+                      </span>
+                      <span className="sm:hidden">{item.tmdbId ? "TMDB" : "Link"}</span>
+                    </button>
+                  </VaultTooltip>
 
                   {/* Vault Tab Link Badge */}
                   <div className="hidden md:block">
@@ -998,42 +1021,53 @@ export function FranchiseDashboard({
                     {formatRuntime(item.runtime)}
                   </span>
 
-                  <button
-                    onClick={() => toggleItemWatched(item)}
-                    className="border-border hover:border-primary flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg border-2 transition-all active:scale-90"
-                    style={{
-                      backgroundColor: item.watched ? "#9B72CF" : "transparent",
-                      borderColor: item.watched ? "#9B72CF" : "var(--color-border)",
-                    }}
-                    title={
+                  <VaultTooltip
+                    label={
                       item.watched
                         ? "Mark as unwatched (updates Vault database)"
                         : "Mark as watched (updates Vault database)"
                     }
+                    placement="left"
                   >
-                    {item.watched && (
-                      <CheckIcon sx={{ fontSize: 15 }} className="text-white" />
-                    )}
-                  </button>
+                    <button
+                      onClick={() => toggleItemWatched(item)}
+                      className="border-border hover:border-primary flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg border-2 transition-all active:scale-90"
+                      style={{
+                        backgroundColor: item.watched ? "#9B72CF" : "transparent",
+                        borderColor: item.watched ? "#9B72CF" : "var(--color-border)",
+                      }}
+                      aria-label={
+                        item.watched
+                          ? "Mark as unwatched (updates Vault database)"
+                          : "Mark as watched (updates Vault database)"
+                      }
+                    >
+                      {item.watched && <CheckIcon sx={{ fontSize: 15 }} className="text-white" />}
+                    </button>
+                  </VaultTooltip>
 
                   {/* Row Actions: Edit & Delete */}
-                  <div className="flex items-center gap-0.5 border-border/60 pl-1 sm:border-l">
-                    <button
-                      type="button"
-                      onClick={() => setEditingItem(item)}
-                      className="text-muted hover:text-foreground hover:bg-surface-elevated flex h-6 w-6 items-center justify-center rounded-md transition-colors"
-                      title={`Edit "${item.title}" details`}
-                    >
-                      <EditIcon sx={{ fontSize: 13 }} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTitle(item)}
-                      className="text-muted hover:text-red-400 hover:bg-red-500/10 flex h-6 w-6 items-center justify-center rounded-md transition-colors"
-                      title={`Remove "${item.title}" from checklist`}
-                    >
-                      <DeleteIcon sx={{ fontSize: 13 }} />
-                    </button>
+                  <div className="border-border/60 flex items-center gap-0.5 pl-1 sm:border-l">
+                    <VaultTooltip label={`Edit "${item.title}" details`}>
+                      <button
+                        type="button"
+                        onClick={() => setEditingItem(item)}
+                        className="text-muted hover:text-foreground hover:bg-surface-elevated flex h-6 w-6 items-center justify-center rounded-md transition-colors"
+                        aria-label={`Edit "${item.title}" details`}
+                      >
+                        <EditIcon sx={{ fontSize: 13 }} />
+                      </button>
+                    </VaultTooltip>
+                    <VaultTooltip label={`Remove "${item.title}" from checklist`}>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTitle(item)}
+                        className="text-muted flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-red-500/10 hover:text-red-400"
+                        aria-label={`Remove "${item.title}" from checklist`}
+                      >
+                        <DeleteIcon sx={{ fontSize: 13 }} />
+                      </button>
+                    </VaultTooltip>
                   </div>
                 </div>
               </div>
@@ -1079,9 +1113,7 @@ export function FranchiseDashboard({
               <button
                 onClick={() => setAiTab("ai")}
                 className={`rounded-lg px-3 py-1.5 transition-colors ${
-                  aiTab === "ai"
-                    ? "bg-primary/20 text-primary"
-                    : "text-muted hover:text-foreground"
+                  aiTab === "ai" ? "bg-primary/20 text-primary" : "text-muted hover:text-foreground"
                 }`}
               >
                 Gemini Slate Updates
@@ -1101,7 +1133,7 @@ export function FranchiseDashboard({
             {aiTab === "ai" ? (
               <div className="space-y-4 text-xs">
                 {isPending ? (
-                  <div className="flex flex-col items-center justify-center py-10 space-y-3">
+                  <div className="flex flex-col items-center justify-center space-y-3 py-10">
                     <AutoAwesomeIcon
                       sx={{ fontSize: 32 }}
                       className="animate-spin text-[#8B6CE8]"
@@ -1112,15 +1144,15 @@ export function FranchiseDashboard({
                   </div>
                 ) : aiResult ? (
                   <div className="space-y-4">
-                    <div className="rounded-xl border border-primary/20 bg-primary/10 p-3.5 text-foreground/90 leading-relaxed">
-                      <span className="font-semibold text-primary">Summary: </span>
+                    <div className="border-primary/20 bg-primary/10 text-foreground/90 rounded-xl border p-3.5 leading-relaxed">
+                      <span className="text-primary font-semibold">Summary: </span>
                       {aiResult.summary}
                     </div>
 
                     {/* Discovered New Items */}
                     {aiResult.newItems.length > 0 && (
                       <div className="space-y-2">
-                        <div className="text-muted font-semibold uppercase tracking-wider text-[11px]">
+                        <div className="text-muted text-[11px] font-semibold tracking-wider uppercase">
                           Newly Announced Titles
                         </div>
                         <div className="space-y-2">
@@ -1130,10 +1162,10 @@ export function FranchiseDashboard({
                               className="border-border bg-background flex items-center justify-between rounded-xl border p-2.5"
                             >
                               <div>
-                                <span className="font-semibold text-foreground">{n.title}</span>
+                                <span className="text-foreground font-semibold">{n.title}</span>
                                 <span className="text-muted ml-2 font-mono">({n.releaseDate})</span>
                                 <span className="text-primary ml-2 font-mono">[{n.type}]</span>
-                                <p className="text-muted text-[11px] mt-0.5">{n.reason}</p>
+                                <p className="text-muted mt-0.5 text-[11px]">{n.reason}</p>
                               </div>
                             </div>
                           ))}
@@ -1150,8 +1182,8 @@ export function FranchiseDashboard({
 
                     {/* Discovered Date Adjustments */}
                     {aiResult.dateUpdates.length > 0 && (
-                      <div className="space-y-2 pt-2 border-border border-t">
-                        <div className="text-muted font-semibold uppercase tracking-wider text-[11px]">
+                      <div className="border-border space-y-2 border-t pt-2">
+                        <div className="text-muted text-[11px] font-semibold tracking-wider uppercase">
                           Calendar Date Confirmations
                         </div>
                         <div className="space-y-2">
@@ -1161,11 +1193,11 @@ export function FranchiseDashboard({
                               className="border-border bg-background flex items-center justify-between rounded-xl border p-2.5"
                             >
                               <div>
-                                <span className="font-semibold text-foreground">{d.title}</span>
-                                <span className="text-primary font-mono ml-2">
+                                <span className="text-foreground font-semibold">{d.title}</span>
+                                <span className="text-primary ml-2 font-mono">
                                   → {d.newReleaseDate}
                                 </span>
-                                <p className="text-muted text-[11px] mt-0.5">{d.reason}</p>
+                                <p className="text-muted mt-0.5 text-[11px]">{d.reason}</p>
                               </div>
                             </div>
                           ))}
@@ -1180,7 +1212,7 @@ export function FranchiseDashboard({
                     )}
                   </div>
                 ) : (
-                  <p className="text-muted text-center py-6">
+                  <p className="text-muted py-6 text-center">
                     Click below to query Gemini AI for latest release shifts.
                   </p>
                 )}
@@ -1227,8 +1259,8 @@ export function FranchiseDashboard({
             </div>
 
             <p className="text-muted text-xs">
-              This formatted checklist includes your completed progress marks (
-              <code>[x]</code> and <code>[ ]</code>). Copy and paste directly into your notes.
+              This formatted checklist includes your completed progress marks (<code>[x]</code> and{" "}
+              <code>[ ]</code>). Copy and paste directly into your notes.
             </p>
 
             <textarea
@@ -1389,16 +1421,20 @@ function TmdbLinkerModal({ item, universe, onClose, onSuccess }: TmdbLinkerModal
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs animate-fade-in">
+    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
       <div className="bg-surface border-border flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border shadow-2xl">
         {/* Header */}
         <div className="border-border flex items-center justify-between border-b p-4 sm:p-5">
           <div>
-            <h2 className="font-display text-foreground text-base sm:text-lg font-bold">
+            <h2 className="font-display text-foreground text-base font-bold sm:text-lg">
               Connect to TMDB
             </h2>
             <p className="text-muted text-xs">
-              Match <span className="text-primary font-semibold font-mono">&ldquo;{item.title}&rdquo;</span> ({item.year}) to the correct TMDB entry.
+              Match{" "}
+              <span className="text-primary font-mono font-semibold">
+                &ldquo;{item.title}&rdquo;
+              </span>{" "}
+              ({item.year}) to the correct TMDB entry.
             </p>
           </div>
           <button
@@ -1419,7 +1455,7 @@ function TmdbLinkerModal({ item, universe, onClose, onSuccess }: TmdbLinkerModal
                   <img
                     src={item.coverUrl}
                     alt={item.title}
-                    className="h-12 w-8 rounded-sm object-cover shadow-2xs border border-border"
+                    className="border-border h-12 w-8 rounded-sm border object-cover shadow-2xs"
                   />
                 )}
                 <div>
@@ -1431,7 +1467,7 @@ function TmdbLinkerModal({ item, universe, onClose, onSuccess }: TmdbLinkerModal
                 type="button"
                 onClick={handleDisconnect}
                 disabled={isDisconnecting}
-                className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-400 transition-colors hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-50"
               >
                 <LinkOffIcon sx={{ fontSize: 15 }} />
                 <span>{isDisconnecting ? "Unlinking..." : "Disconnect"}</span>
@@ -1453,7 +1489,7 @@ function TmdbLinkerModal({ item, universe, onClose, onSuccess }: TmdbLinkerModal
                   onClick={() => setMediaType("movie")}
                   className={`rounded-lg px-2.5 py-1 transition-all ${
                     mediaType === "movie"
-                      ? "bg-surface text-foreground border-border font-bold shadow-2xs border"
+                      ? "bg-surface text-foreground border-border border font-bold shadow-2xs"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -1464,7 +1500,7 @@ function TmdbLinkerModal({ item, universe, onClose, onSuccess }: TmdbLinkerModal
                   onClick={() => setMediaType("series")}
                   className={`rounded-lg px-2.5 py-1 transition-all ${
                     mediaType === "series"
-                      ? "bg-surface text-foreground border-border font-bold shadow-2xs border"
+                      ? "bg-surface text-foreground border-border border font-bold shadow-2xs"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -1481,9 +1517,11 @@ function TmdbLinkerModal({ item, universe, onClose, onSuccess }: TmdbLinkerModal
                     min={1}
                     max={30}
                     value={seasonNumber ?? ""}
-                    onChange={(e) => setSeasonNumber(e.target.value ? parseInt(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      setSeasonNumber(e.target.value ? parseInt(e.target.value) : undefined)
+                    }
                     placeholder="All"
-                    className="bg-background border-border text-foreground h-8 w-16 rounded-xl border px-2 text-center text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="bg-background border-border text-foreground focus:ring-primary h-8 w-16 rounded-xl border px-2 text-center text-xs focus:ring-1 focus:outline-none"
                   />
                 </div>
               )}
@@ -1533,10 +1571,11 @@ function TmdbLinkerModal({ item, universe, onClose, onSuccess }: TmdbLinkerModal
               </div>
             ) : results.length === 0 ? (
               <div className="bg-background border-border text-muted rounded-xl border p-6 text-center text-xs">
-                No matching TMDB items found. Try typing a different search term or enter the exact numeric TMDB ID from themoviedb.org.
+                No matching TMDB items found. Try typing a different search term or enter the exact
+                numeric TMDB ID from themoviedb.org.
               </div>
             ) : (
-              <div className="divide-border max-h-72 divide-y overflow-y-auto rounded-xl border border-border bg-background">
+              <div className="divide-border border-border bg-background max-h-72 divide-y overflow-y-auto rounded-xl border">
                 {results.map((res) => (
                   <div
                     key={res.id}
@@ -1547,29 +1586,27 @@ function TmdbLinkerModal({ item, universe, onClose, onSuccess }: TmdbLinkerModal
                         <img
                           src={res.coverUrl}
                           alt={res.title}
-                          className="h-13 w-9 shrink-0 rounded-sm object-cover border border-border shadow-2xs"
+                          className="border-border h-13 w-9 shrink-0 rounded-sm border object-cover shadow-2xs"
                         />
                       ) : (
-                        <div className="bg-surface border-border text-muted/60 flex h-13 w-9 shrink-0 items-center justify-center rounded-sm border text-[10px] font-mono">
+                        <div className="bg-surface border-border text-muted/60 flex h-13 w-9 shrink-0 items-center justify-center rounded-sm border font-mono text-[10px]">
                           NO ART
                         </div>
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-foreground text-xs font-semibold truncate">
+                          <span className="text-foreground truncate text-xs font-semibold">
                             {res.title}
                           </span>
                           {res.year && (
-                            <span className="text-muted text-[11px] font-mono">
-                              ({res.year})
-                            </span>
+                            <span className="text-muted font-mono text-[11px]">({res.year})</span>
                           )}
-                          <span className="bg-surface-elevated text-muted border-border rounded-md border px-1.5 py-0.2 font-mono text-[10px]">
+                          <span className="bg-surface-elevated text-muted border-border py-0.2 rounded-md border px-1.5 font-mono text-[10px]">
                             #{res.id}
                           </span>
                         </div>
                         {res.overview && (
-                          <p className="text-muted line-clamp-2 mt-0.5 text-[11px]">
+                          <p className="text-muted mt-0.5 line-clamp-2 text-[11px]">
                             {res.overview}
                           </p>
                         )}

@@ -19,6 +19,7 @@ import { getAllVaultTagsAction, updateMediaProgress } from "@/lib/actions/mediaA
 import { STATUS_LABELS } from "@/lib/constants"
 import { ReadingTimer } from "./ReadingTimer"
 import { toast } from "sonner"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 import { FormControl, Select, MenuItem, Autocomplete, TextField } from "@mui/material"
 import { DatePicker } from "@mui/x-date-pickers/DatePicker"
 import dayjs from "dayjs"
@@ -714,25 +715,28 @@ export function ProgressLogger({
                         {seasonNumber === "0" ? "Specials" : `Season ${seasonNumber}`}
                       </span>
                       {hasDetailedEpisodes && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleAllEpisodes(seasonNumber, !allSeasonWatched)
-                          }}
-                          className={`cursor-pointer rounded-md border px-2 py-0.5 text-[10px] font-semibold transition-all ${
-                            allSeasonWatched
-                              ? "bg-primary text-primary-fg border-primary shadow-xs"
-                              : "bg-surface-elevated text-muted hover:text-primary hover:border-primary border-border"
-                          }`}
-                          title={
+                        <VaultTooltip
+                          label={
                             allSeasonWatched
                               ? "Unmark all episodes in this season"
                               : "Mark all episodes in this season as watched"
                           }
                         >
-                          {allSeasonWatched ? "✓ All Watched" : "Select All"}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleAllEpisodes(seasonNumber, !allSeasonWatched)
+                            }}
+                            className={`cursor-pointer rounded-md border px-2 py-0.5 text-[10px] font-semibold transition-all ${
+                              allSeasonWatched
+                                ? "bg-primary text-primary-fg border-primary shadow-xs"
+                                : "bg-surface-elevated text-muted hover:text-primary hover:border-primary border-border"
+                            }`}
+                          >
+                            {allSeasonWatched ? "✓ All Watched" : "Select All"}
+                          </button>
+                        </VaultTooltip>
                       )}
                     </div>
                     <div className="flex items-center gap-3">

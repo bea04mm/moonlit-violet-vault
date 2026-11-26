@@ -9,6 +9,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome"
 import CloseIcon from "@mui/icons-material/Close"
 import CheckIcon from "@mui/icons-material/Check"
@@ -38,11 +39,27 @@ interface AddFranchiseModalProps {
 const PRESET_SUGGESTIONS = [
   { name: "Star Wars", color: "#E5B842", notes: "Complete chronological canon and legends saga" },
   { name: "Wizarding World", color: "#85144b", notes: "Harry Potter and Fantastic Beasts films" },
-  { name: "Middle-earth", color: "#2ECC40", notes: "The Lord of the Rings and The Hobbit in chronological order" },
-  { name: "James Bond 007", color: "#0074D9", notes: "EON Productions Bond films from Dr. No to No Time to Die" },
-  { name: "Doctor Who", color: "#00BCD4", notes: "Modern revival series and specials from 2005 onwards" },
+  {
+    name: "Middle-earth",
+    color: "#2ECC40",
+    notes: "The Lord of the Rings and The Hobbit in chronological order",
+  },
+  {
+    name: "James Bond 007",
+    color: "#0074D9",
+    notes: "EON Productions Bond films from Dr. No to No Time to Die",
+  },
+  {
+    name: "Doctor Who",
+    color: "#00BCD4",
+    notes: "Modern revival series and specials from 2005 onwards",
+  },
   { name: "MonsterVerse", color: "#9B59B6", notes: "Godzilla and Kong cinematic universe" },
-  { name: "Alien & Predator", color: "#607D8B", notes: "Complete Alien and Predator chronological timeline" },
+  {
+    name: "Alien & Predator",
+    color: "#607D8B",
+    notes: "Complete Alien and Predator chronological timeline",
+  },
 ]
 
 /**
@@ -76,7 +93,7 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
 
   if (!isOpen) return null
 
-  const handleSelectPreset = (preset: typeof PRESET_SUGGESTIONS[0]) => {
+  const handleSelectPreset = (preset: (typeof PRESET_SUGGESTIONS)[0]) => {
     setName(preset.name)
     setShortName(preset.name.slice(0, 14))
     setAccentColor(preset.color)
@@ -145,8 +162,8 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs animate-fade-in">
-      <div className="border-border bg-surface w-full max-w-xl space-y-4 rounded-2xl border p-5 shadow-2xl sm:p-6 max-h-[90vh] overflow-y-auto">
+    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
+      <div className="border-border bg-surface max-h-[90vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-2xl border p-5 shadow-2xl sm:p-6">
         {/* Header */}
         <div className="border-border flex items-center justify-between border-b pb-3">
           <div className="flex items-center gap-2">
@@ -204,7 +221,7 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
         {/* Quick Presets (AI Tab) */}
         {tab === "ai" && (
           <div className="space-y-1.5">
-            <label className="text-muted text-[11px] font-semibold uppercase tracking-wider">
+            <label className="text-muted text-[11px] font-semibold tracking-wider uppercase">
               Quick Suggestions
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -271,17 +288,21 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
                     borderColor: accentColor === c ? "#ffffff" : "transparent",
                   }}
                 >
-                  {accentColor === c && <CheckIcon sx={{ fontSize: 14 }} className="text-white drop-shadow-sm" />}
+                  {accentColor === c && (
+                    <CheckIcon sx={{ fontSize: 14 }} className="text-white drop-shadow-sm" />
+                  )}
                 </button>
               ))}
             </div>
-            <input
-              type="color"
-              value={accentColor}
-              onChange={(e) => setAccentColor(e.target.value)}
-              className="h-7 w-8 cursor-pointer rounded-md border-0 bg-transparent p-0"
-              title="Custom Hex Color"
-            />
+            <VaultTooltip label="Custom Hex Color">
+              <input
+                type="color"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="h-7 w-8 cursor-pointer rounded-md border-0 bg-transparent p-0"
+                aria-label="Custom Hex Color"
+              />
+            </VaultTooltip>
           </div>
         </div>
 
@@ -333,10 +354,7 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
               disabled={isLoading || !name.trim()}
               className="bg-primary hover:bg-primary/90 text-primary-fg flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-xs transition-all disabled:opacity-50"
             >
-              <AutoAwesomeIcon
-                sx={{ fontSize: 15 }}
-                className={isLoading ? "animate-spin" : ""}
-              />
+              <AutoAwesomeIcon sx={{ fontSize: 15 }} className={isLoading ? "animate-spin" : ""} />
               <span>{isLoading ? "Generating with Gemini..." : "Generate & Add Franchise"}</span>
             </button>
           ) : (

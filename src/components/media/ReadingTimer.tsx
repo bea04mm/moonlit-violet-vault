@@ -10,6 +10,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 
 /**
  * Props for ReadingTimer.
@@ -127,18 +128,23 @@ export function ReadingTimer({ itemId, onStop }: ReadingTimerProps) {
 
   return (
     <div className="bg-surface border-border mb-4 flex items-center gap-3 rounded-xl border p-3">
-      <button
-        type="button"
-        onClick={handleToggle}
-        className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-xs transition-colors ${
-          isRunning
-            ? "border border-rose-500/40 bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 dark:text-rose-300"
-            : "bg-primary hover:bg-primary-hover text-primary-fg shadow-sm"
-        }`}
-        title={isRunning ? "Stop Reading Session" : "Start Reading Session"}
+      <VaultTooltip
+        label={isRunning ? "Stop Reading Session" : "Start Reading Session"}
+        placement="top"
       >
-        {isRunning ? "⏹" : "▶"}
-      </button>
+        <button
+          type="button"
+          onClick={handleToggle}
+          className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-xs transition-colors ${
+            isRunning
+              ? "border border-rose-500/40 bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 dark:text-rose-300"
+              : "bg-primary hover:bg-primary-hover text-primary-fg shadow-sm"
+          }`}
+          aria-label={isRunning ? "Stop Reading Session" : "Start Reading Session"}
+        >
+          {isRunning ? "⏹" : "▶"}
+        </button>
+      </VaultTooltip>
 
       <div className="flex flex-col">
         <span className="text-primary text-[10px] font-medium tracking-wider uppercase">

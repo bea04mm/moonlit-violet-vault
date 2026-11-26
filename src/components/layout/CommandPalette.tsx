@@ -33,6 +33,7 @@ import type { MediaItem, MediaType } from "@/lib/supabase/database.types"
 import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS, TYPE_COLORS } from "@/lib/constants"
 import { triggerAddMedia } from "@/components/media/AddMediaModal"
 import { useTheme } from "@/lib/mui/MuiProvider"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 
 /**
  * A palette entry is either a navigation shortcut (no query) or a vault media item (with query).
@@ -76,7 +77,7 @@ function useAutoScroll(isSelected: boolean) {
   return ref
 }
 
-const emptySubscribe = () => () => {}
+const emptySubscribe = () => () => { }
 
 /**
  * Full-screen command palette dialog — opens on Ctrl+K and closes on Escape.
@@ -107,7 +108,16 @@ export function CommandPalette() {
     setIsOpen(true)
     setQuery("")
     setActiveType("all")
-    const navPaths = ["/", "/movies", "/series", "/franchises", "/books", "/recipes", "/import", "/analytics"]
+    const navPaths = [
+      "/",
+      "/movies",
+      "/series",
+      "/franchises",
+      "/books",
+      "/recipes",
+      "/import",
+      "/analytics",
+    ]
     const currentIndex = navPaths.indexOf(pathname)
     setSelectedIndex(currentIndex !== -1 ? currentIndex : 0)
     if (items.length === 0) {
@@ -315,17 +325,16 @@ export function CommandPalette() {
               <span className="font-handwriting text-accent text-sm select-none">quick search</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-primary bg-primary/10 border-primary/25 hidden rounded border px-1.5 py-0.5 font-mono text-[10px] select-none sm:inline-block">
-                ESC
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="text-muted hover:text-primary hover:bg-surface-elevated cursor-pointer rounded-md p-1 text-xs transition-colors"
-                aria-label="Close"
-              >
-                ✕
-              </button>
+              <VaultTooltip label="Close (Esc)" placement="left">
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="text-muted hover:text-primary hover:bg-surface-elevated cursor-pointer rounded-md p-1 text-xs transition-colors"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </VaultTooltip>
             </div>
           </div>
 
@@ -348,19 +357,21 @@ export function CommandPalette() {
               sx={{ fontSize: 18 }}
             />
             {query && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("")
-                  setActiveType("all")
-                  setSelectedIndex(0)
-                  inputRef.current?.focus()
-                }}
-                className="text-muted hover:text-primary absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer p-1 text-xs"
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
+              <VaultTooltip label="Clear search" placement="left">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("")
+                    setActiveType("all")
+                    setSelectedIndex(0)
+                    inputRef.current?.focus()
+                  }}
+                  className="text-muted hover:text-primary absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer p-1 text-xs"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              </VaultTooltip>
             )}
           </div>
 
@@ -379,11 +390,10 @@ export function CommandPalette() {
                       setActiveType(t)
                       setSelectedIndex(0)
                     }}
-                    className={`shrink-0 cursor-pointer rounded-md border px-2.5 py-1 font-mono text-[11px] transition-all ${
-                      isActive
+                    className={`shrink-0 cursor-pointer rounded-md border px-2.5 py-1 font-mono text-[11px] transition-all ${isActive
                         ? "bg-primary text-primary-fg border-primary font-semibold shadow-xs"
                         : "bg-surface-elevated text-primary/80 hover:text-primary border-primary/25 hover:border-primary"
-                    }`}
+                      }`}
                   >
                     {t === "all" ? "All" : TYPE_LABELS[t]} ({count})
                   </button>
@@ -533,19 +543,17 @@ function PaletteNavAction({
       ref={ref}
       type="button"
       onClick={onClick}
-      className={`group flex w-full cursor-pointer items-center justify-between rounded-lg border p-2.5 text-left transition-colors ${
-        isSelected
+      className={`group flex w-full cursor-pointer items-center justify-between rounded-lg border p-2.5 text-left transition-colors ${isSelected
           ? "bg-surface-elevated border-primary/35"
           : "hover:bg-surface-elevated/70 border-transparent"
-      }`}
+        }`}
     >
       <div className="flex items-center gap-3">
         <div
-          className={`border-border flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors ${
-            isSelected
+          className={`border-border flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors ${isSelected
               ? "bg-primary/20 text-primary"
               : "bg-surface-elevated text-primary group-hover:bg-surface group-hover:text-accent"
-          }`}
+            }`}
         >
           {icon}
         </div>
@@ -582,11 +590,10 @@ function PaletteItemAction({
       ref={ref}
       type="button"
       onClick={onClick}
-      className={`group flex w-full cursor-pointer items-center justify-between rounded-lg border p-2.5 text-left transition-colors ${
-        isSelected
+      className={`group flex w-full cursor-pointer items-center justify-between rounded-lg border p-2.5 text-left transition-colors ${isSelected
           ? "bg-surface-elevated border-primary/40 shadow-xs"
           : "hover:bg-surface-elevated/70 border-transparent"
-      }`}
+        }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="bg-surface-elevated border-border relative flex h-14 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border">
@@ -617,28 +624,25 @@ function PaletteItemAction({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3
-              className={`truncate text-sm font-medium transition-colors ${
-                isSelected
+              className={`truncate text-sm font-medium transition-colors ${isSelected
                   ? "text-primary font-semibold"
                   : "text-foreground group-hover:text-primary"
-              }`}
+                }`}
             >
               {highlightMatch(item.title, query)}
             </h3>
             <span
-              className={`inline-flex h-4 shrink-0 items-center justify-center rounded border px-1.5 text-[9px] leading-none font-semibold tracking-wider ${
-                TYPE_COLORS[item.type] ?? "bg-primary/10 text-primary border-primary/20"
-              }`}
+              className={`inline-flex h-4 shrink-0 items-center justify-center rounded border px-1.5 text-[9px] leading-none font-semibold tracking-wider ${TYPE_COLORS[item.type] ?? "bg-primary/10 text-primary border-primary/20"
+                }`}
             >
               {TYPE_LABELS[item.type]}
             </span>
             {item.is_favorite && (
-              <span
-                className="text-primary shrink-0 text-xs select-none dark:text-purple-400"
-                title="Favorite"
-              >
-                ♥
-              </span>
+              <VaultTooltip label="Favorite" placement="top">
+                <span className="text-primary shrink-0 text-xs select-none dark:text-purple-400">
+                  ♥
+                </span>
+              </VaultTooltip>
             )}
           </div>
 
@@ -671,11 +675,10 @@ function PaletteItemAction({
 
       <div className="shrink-0 pl-2">
         <span
-          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] transition-all ${
-            isSelected
+          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] transition-all ${isSelected
               ? "bg-primary/10 text-primary border-primary/25 border opacity-100"
               : "text-muted opacity-0 group-hover:opacity-100"
-          }`}
+            }`}
         >
           <span className="hidden sm:inline">Open</span>
           <span>↵</span>

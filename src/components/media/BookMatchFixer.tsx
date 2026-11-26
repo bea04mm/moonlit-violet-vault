@@ -9,6 +9,7 @@
 "use client"
 
 import { useState } from "react"
+import { VaultTooltip } from "@/components/ui/VaultTooltip"
 import { useRouter } from "next/navigation"
 import SearchIcon from "@mui/icons-material/Search"
 import Image from "next/image"
@@ -98,7 +99,8 @@ export function BookMatchFixer({ item }: { item: MediaItem }) {
     setLoading(true)
     try {
       const info = book.volumeInfo
-      const fallbackQuery = `${info.title || item.title} ${info.authors?.join(" ") || item.author || ""}`.trim()
+      const fallbackQuery =
+        `${info.title || item.title} ${info.authors?.join(" ") || item.author || ""}`.trim()
       const details = await fetchBookDetails(book.id, fallbackQuery)
       const coverUrl =
         details?.coverUrl ||
@@ -159,14 +161,16 @@ export function BookMatchFixer({ item }: { item: MediaItem }) {
           <div className="bg-surface border-border flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border p-5 shadow-2xl">
             <div className="border-border mb-4 flex items-center justify-between border-b pb-3">
               <h3 className="text-foreground text-sm font-semibold">Find Correct Book</h3>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="text-muted hover:text-foreground cursor-pointer rounded-md p-1 text-xs"
-                aria-label="Close dialog"
-              >
-                ✕
-              </button>
+              <VaultTooltip label="Close" placement="left">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="text-muted hover:text-foreground cursor-pointer rounded-md p-1 text-xs"
+                  aria-label="Close dialog"
+                >
+                  ✕
+                </button>
+              </VaultTooltip>
             </div>
 
             <div className="custom-scrollbar flex-1 overflow-y-auto pr-1">
