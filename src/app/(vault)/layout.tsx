@@ -1,12 +1,12 @@
 /**
  * Shared layout for all authenticated vault pages (the `(vault)` route group).
- * Renders: AutoSyncTrigger (background series sync), Navbar, main content area,
+ * Renders: AutoSyncTrigger (background series sync), Sidebar shell, main content area,
  * AddMediaButton (floating FAB), and the Sonner Toaster for notifications.
  * All pages inside `(vault)/` inherit this layout automatically.
  *
  * @packageDocumentation
  */
-import { Navbar } from "@/components/layout/Navbar"
+import { Sidebar } from "@/components/layout/Sidebar"
 import { AutoSyncTrigger } from "@/components/layout/AutoSyncTrigger"
 import { BackToTopButton } from "@/components/layout/BackToTopButton"
 import { AddMediaButton } from "@/components/media/AddMediaButton"
@@ -14,10 +14,10 @@ import { Toaster } from "sonner"
 
 export default function VaultLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-background flex min-h-screen flex-col">
+    <div className="bg-background flex min-h-screen flex-col lg:flex-row">
       <AutoSyncTrigger />
-      <Navbar />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-4 pb-28 sm:px-6 sm:py-8">
+      <Sidebar />
+      <main className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 pt-4 pb-28 sm:px-6 sm:py-8 lg:px-8">
         {children}
       </main>
       <BackToTopButton />
