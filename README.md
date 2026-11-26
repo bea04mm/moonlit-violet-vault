@@ -19,24 +19,25 @@ _Built with clean architecture, cute violet aesthetics, and smart AI data pipeli
 
 ## ✨ Features
 
-| Feature                         | Description                                                                                             |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 🪐 **Franchise Sagas**          | Chronological viewing checklists for Marvel, DC, and custom sagas with Gemini AI sync & vault linking   |
-| 🎬 **Movie Tracker**            | Browse, rate, and filter movies with collapsible tag/genre trays, director tracking & TMDB refresh      |
-| 📺 **Series Tracker**           | Track ongoing and completed TV series with episode-level precision, creator credits & auto-syncing     |
-| 📚 **Book Vault**               | Import from Goodreads CSV with full metadata enrichment & live reading stopwatch                        |
-| 🍳 **Recipe Vault**             | Track recipes, ingredients, and instructions (paste URLs directly!)                                     |
-| 📊 **Vault Wrapped**            | Spotify-style animated analytics & presentation of your media consumption                               |
-| 🪄 **In-App Import**            | Upload Goodreads CSVs directly in the browser with real-time progress                                   |
-| 🔍 **Smart Match Fixer**        | Manually fix bad API matches with Google Books + OpenLibrary fallbacks                                  |
-| 📸 **Magic AI Scanner**         | Upload media covers or spine photos → multi-model Gemini OCR extracts titles automatically              |
-| ⭐ **Favorites Carousel**       | Highlight your favorite items in a sleek horizontal swipeable carousel                                  |
-| 📱 **Progressive Web App**      | Install natively on iOS, Android, and Desktop with offline support                                      |
-| ⚡ **Command Palette**          | Press `Ctrl+K` for global instant search and quick navigation across all galleries                      |
-| 🏷️ **Clean Tag & Genre Filtering** | Collapsible tag bar aggregating both custom tags and official genres without clutter                |
-| 🤏 **Native Gestures**          | Horizontal list layout with iOS-style swipe actions (Swipe to delete/progress)                          |
-| 🌙 **Dual Theme Aesthetic**     | Moonlit Violet Dark Craft mode & Warm Paper Craft Light mode with seamless theme toggling               |
-| 🔒 **Private Vault**            | Google OAuth + email whitelist — only you can enter                                                     |
+| Feature                            | Description                                                                                           |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 🪐 **Franchise Sagas**             | Chronological viewing checklists for Marvel, DC, and custom sagas with Gemini AI sync & vault linking |
+| 🎬 **Movie Tracker**               | Browse, rate, and filter movies with collapsible tag/genre trays, director tracking & TMDB refresh    |
+| 📺 **Series Tracker**              | Track ongoing and completed TV series with episode-level precision, creator credits & auto-syncing    |
+| 📚 **Book Vault**                  | Import from Goodreads CSV with full metadata enrichment & live reading stopwatch                      |
+| 🍳 **Recipe Vault**                | Track recipes, ingredients, and instructions (paste URLs directly!)                                   |
+| 📊 **Vault Wrapped**               | Spotify-style animated analytics & presentation of your media consumption                             |
+| 🪄 **In-App Import**               | Upload Goodreads CSVs directly in the browser with real-time progress                                 |
+| 🔍 **Smart Match Fixer**           | Manually fix bad API matches with Google Books + OpenLibrary fallbacks                                |
+| 📸 **Magic AI Scanner**            | Upload media covers or spine photos → multi-model Gemini OCR extracts titles automatically            |
+| ⭐ **Favorites Carousel**          | Highlight your favorite items in a sleek horizontal swipeable carousel                                |
+| 📱 **Progressive Web App**         | Install natively on iOS, Android, and Desktop with offline support                                    |
+| 🧭 **Collapsible Sidebar**         | Sticky desktop rail (expandable/collapsible with portal tooltips) and slide-over mobile drawer        |
+| ⚡ **Command Palette**             | Press `Ctrl+K` for global instant search and quick navigation across all galleries                    |
+| 🏷️ **Clean Tag & Genre Filtering** | Collapsible tag bar aggregating both custom tags and official genres without clutter                  |
+| 🤏 **Native Gestures**             | Horizontal list layout with iOS-style swipe actions (Swipe to delete/progress)                        |
+| 🌙 **Dual Theme Aesthetic**        | Moonlit Violet Dark Craft mode & Warm Paper Craft Light mode with seamless theme toggling             |
+| 🔒 **Private Vault**               | Google OAuth + email whitelist — only you can enter                                                   |
 
 ---
 
@@ -140,6 +141,7 @@ cp .env.example .env
 ```
 
 Key environment variables:
+
 - `NEXT_PUBLIC_SUPABASE_URL` & `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase project access
 - `ALLOWED_EMAIL` — Whitelisted email for Google OAuth vault lock
 - `TMDB_API_KEY` — Movie, TV series, director credits, and artwork sync
@@ -190,8 +192,9 @@ moonlit-violet-vault/
 │   │   └── login/               # Public login page
 │   ├── components/              # UI, Media, Franchises, Layout, and Auth components
 │   │   ├── franchises/          # Checklists, AI generation modals, and index views
-│   │   ├── media/               # MediaDetail, TabbedDashboard, SwipeableItem
-│   │   └── layout/              # Navbar, CommandPalette, PageHeader, ThemeToggle
+│   │   ├── media/               # MediaDetail, TabbedDashboard, MediaCard
+│   │   ├── layout/              # Sidebar, CommandPalette, PageHeader, ThemeToggle, BackToTopButton
+│   │   └── ui/                  # Badge, Skeleton, VaultTooltip
 │   ├── data/
 │   │   └── franchises/          # Master viewing checklists (MCU, DC) & markdown parsers
 │   ├── lib/
@@ -245,33 +248,43 @@ npm run format:check  # Prettier (CI check)
 This project uses Supabase migrations for schema versioning. The migrations are executed sequentially:
 
 ### `001_initial_schema.sql`
+
 Initial Database Schema. Configures the base `media_items` table, custom enums (`media_type`, `media_status`, `ingestion_source`), UUID generation, Row Level Security (RLS) policies, and timestamp update triggers.
 
 ### `002_add_progress_tracking.sql`
+
 Adds progress tracking columns to `media_items`: `is_favorite`, `pages_read`, `total_pages`, `episodes_seen`, and `reading_time_minutes`.
 
 ### `003_add_season_progress.sql`
+
 Adds season-level tracking for TV series (`seasons_seen` integer column).
 
 ### `004_add_last_synced_at.sql`
+
 Adds the `last_synced_at` timestamp column to track external API synchronization status.
 
 ### `005_add_series_status.sql`
+
 Adds the `series_status` string column to track whether a TV show is Returning, Ended, or Canceled.
 
 ### `006_add_reading_journal.sql`
+
 Adds the `reading_journal` JSONB column for logging daily thoughts while reading.
 
 ### `007_add_tags_and_sort_order.sql`
+
 Adds custom categorization and ordering: `tags` text array and `sort_order` integer.
 
 ### `008_add_recipes.sql`
+
 Expands the vault to support Recipes: adds `recipe` to `media_type`, adds cooking statuses, ingredients, and instructions.
 
 ### `009_add_performance_indexes.sql`
+
 Database Optimization: creates B-Tree and GIN indexes on frequently queried columns (`user_id`, `type`, `status`, `date_added`, `is_favorite`).
 
 ### `010_create_franchises_table.sql`
+
 Custom Franchises & Sagas Schema: creates the `franchises` table for storing user-created cinematic universes and dynamic viewing checklists with RLS policies and auto-updated timestamps.
 
 ---
