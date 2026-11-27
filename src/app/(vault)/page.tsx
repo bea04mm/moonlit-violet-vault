@@ -12,7 +12,7 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 import { getVaultStats, getRecentlyAdded, getFavorites } from "@/lib/services/mediaService"
 import { MediaGrid } from "@/components/media/MediaGrid"
-import { MediaCardSkeleton } from "@/components/ui/Skeleton"
+import { MediaCardSkeleton, StatsRibbonSkeleton } from "@/components/ui/Skeleton"
 import { PageHeader } from "@/components/layout/PageHeader"
 import MovieIcon from "@mui/icons-material/Movie"
 import TvIcon from "@mui/icons-material/Tv"
@@ -75,14 +75,10 @@ function DashboardSkeleton() {
         <h2 className="text-muted mb-3 font-mono text-[11px] font-medium tracking-wider uppercase">
           Overview
         </h2>
-        <div className="grid grid-cols-2 gap-3 pb-4 sm:grid-cols-3 lg:grid-cols-5">
-          {[...Array(5)].map((_, index) => (
-            <div
-              key={index}
-              className="h-32 animate-pulse rounded-xl border border-violet-500/20 bg-violet-950/30"
-            />
-          ))}
-        </div>
+        <StatsRibbonSkeleton
+          count={5}
+          gridClass="grid grid-cols-2 gap-3 pb-4 sm:grid-cols-3 lg:grid-cols-5"
+        />
       </section>
 
       <section aria-label="Loading favorites" className="mb-6">

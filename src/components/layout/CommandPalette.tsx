@@ -34,6 +34,7 @@ import { STATUS_LABELS, STATUS_COLORS, TYPE_LABELS, TYPE_COLORS } from "@/lib/co
 import { triggerAddMedia } from "@/components/media/AddMediaModal"
 import { useTheme } from "@/lib/mui/MuiProvider"
 import { VaultTooltip } from "@/components/ui/VaultTooltip"
+import { Skeleton } from "@/components/ui/Skeleton"
 
 /**
  * A palette entry is either a navigation shortcut (no query) or a vault media item (with query).
@@ -428,12 +429,12 @@ export function CommandPalette() {
               {[1, 2, 3].map((n) => (
                 <div
                   key={n}
-                  className="border-primary/20 bg-primary/5 flex animate-pulse items-center gap-3 rounded-lg border p-2.5"
+                  className="bg-surface/90 flex items-center gap-3 rounded-lg border border-violet-500/20 p-2.5"
                 >
-                  <div className="bg-primary/10 h-14 w-10 rounded-md" />
+                  <Skeleton className="h-14 w-10 shrink-0 rounded-md" />
                   <div className="flex-1 space-y-2">
-                    <div className="bg-primary/10 h-3.5 w-1/3 rounded" />
-                    <div className="bg-primary/10 h-2.5 w-1/4 rounded" />
+                    <Skeleton className="h-3.5 w-1/3" />
+                    <Skeleton className="h-2.5 w-1/4" />
                   </div>
                 </div>
               ))}

@@ -10,6 +10,7 @@ import type { Metadata } from "next"
 import { getAnalyticsData } from "@/lib/services/mediaService"
 import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts"
 import { PageHeader } from "@/components/layout/PageHeader"
+import { AnalyticsSkeleton } from "@/components/ui/Skeleton"
 
 /**
  * Metadata configuration for the analytics dashboard page.
@@ -31,21 +32,6 @@ async function AnalyticsContent() {
 }
 
 /**
- * Fallback loading skeleton for the analytics dashboard, displaying animated placeholders.
- */
-function AnalyticsLoading() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-surface border-border h-64 animate-pulse rounded-xl border" />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/**
  * Renders the Analytics dashboard page, displaying a header and wrapping the chart content in a Suspense boundary.
  */
 export default function AnalyticsPage() {
@@ -57,7 +43,7 @@ export default function AnalyticsPage() {
         description="A deep dive into your library distribution and time invested."
       />
 
-      <Suspense fallback={<AnalyticsLoading />}>
+      <Suspense fallback={<AnalyticsSkeleton />}>
         <AnalyticsContent />
       </Suspense>
     </div>
