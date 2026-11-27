@@ -1,25 +1,29 @@
 /**
- * Tabbed Dashboard component for organizing media items.
+ * Tabbed Dashboard component for organizing and filtering media items.
  *
  * @packageDocumentation
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { useSearchParams, usePathname } from "next/navigation"
 import type { MediaItem, MediaType } from "@/lib/supabase/database.types"
 import { MediaGrid } from "./MediaGrid"
 import { FormControl, Select, MenuItem } from "@mui/material"
 import { PageHeader } from "@/components/layout/PageHeader"
 import SyncIcon from "@mui/icons-material/Sync"
+import SearchIcon from "@mui/icons-material/Search"
+import CloseIcon from "@mui/icons-material/Close"
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"
 import { syncAllSeriesAction, syncAllMoviesAction } from "@/lib/actions/mediaActions"
+import { parseCreators } from "@/lib/utils/formatters"
+import { usePersistedSort } from "@/lib/utils/usePersistedSort"
 import { toast } from "sonner"
 import { VaultTooltip } from "@/components/ui/VaultTooltip"
+import { MediaCardSkeleton, Skeleton } from "@/components/ui/Skeleton"
 
 /**
- * Props interface for the TabbedDashboardProps.
+ * Props interface for TabbedDashboard.
  */
 export interface TabbedDashboardProps {
   type: MediaType
@@ -27,273 +31,454 @@ export interface TabbedDashboardProps {
   title?: string
   accent?: string
   description?: string
-  headerNode?: React.ReactNode
 }
 
 export interface TabbedDashboardLoadingProps {
+  type: MediaType
   title?: string
   accent?: string
   description?: string
-  headerNode?: React.ReactNode
-  tabs: string[]
 }
 
-export function TabbedDashboardLoading({
-  title,
-  accent,
-  description,
-  headerNode,
-  tabs,
-}: TabbedDashboardLoadingProps) {
-  const tabsSkeleton = (
-    <div className="bg-surface border-border custom-scrollbar flex w-full max-w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-xl border p-1 lg:w-auto">
-      {tabs.map((tab) => (
-        <div
-          key={tab}
-          className="h-8 w-24 shrink-0 animate-pulse rounded-lg border border-violet-500/20 bg-violet-950/40"
-        />
-      ))}
-      <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
-      <div className="h-8 w-32 shrink-0 animate-pulse rounded-lg border border-violet-500/20 bg-violet-950/40" />
-    </div>
-  )
+const SORT_OPTIONS = ["date_added", "title", "release_year", "user_rating"] as const
+type SortOption = (typeof SORT_OPTIONS)[number]
+type CreatorField = "author" | "director"
+type FacetOption = { name: string; count: number }
 
-  if (title) {
-    return (
-      <PageHeader title={title} accent={accent} description={description}>
-        {tabsSkeleton}
-      </PageHeader>
-    )
-  }
-
-  return (
-    <div className="border-border mb-6 border-b pb-4">
-      <div className="flex min-w-0 flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        {headerNode}
-        <div className="flex w-full max-w-full min-w-0 items-center lg:w-auto">{tabsSkeleton}</div>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Configuration object for a dashboard filter tab.
- */
 type TabConfig = {
   id: string
   label: string
   filterFn: (item: MediaItem) => boolean
 }
 
-/**
- * Tabbed interface for filtering media lists by status.
- */
-export function TabbedDashboard({
+const TABS_BY_TYPE: Record<MediaType, TabConfig[]> = {
+  series: [
+    { id: "watching", label: "Watching", filterFn: (item) => item.status === "watching" },
+    {
+      id: "want_to_watch",
+      label: "Want to Watch",
+      filterFn: (item) => item.status === "want_to_watch",
+    },
+    {
+      id: "waiting",
+      label: "Waiting",
+      filterFn: (item) => item.status === "watched" && item.tmdb_status === "Returning Series",
+    },
+    {
+      id: "ended",
+      label: "Ended",
+      filterFn: (item) => item.status === "watched" && item.tmdb_status !== "Returning Series",
+    },
+    {
+      id: "other",
+      label: "Other",
+      filterFn: (item) => item.status === "dropped" || item.status === "on_hold",
+    },
+  ],
+  movie: [
+    {
+      id: "want_to_watch",
+      label: "Want to Watch",
+      filterFn: (item) => item.status === "want_to_watch",
+    },
+    { id: "watching", label: "Watching", filterFn: (item) => item.status === "watching" },
+    { id: "watched", label: "Watched", filterFn: (item) => item.status === "watched" },
+    {
+      id: "other",
+      label: "Other",
+      filterFn: (item) => item.status === "dropped" || item.status === "on_hold",
+    },
+  ],
+  book: [
+    { id: "reading", label: "Reading", filterFn: (item) => item.status === "reading" },
+    {
+      id: "want_to_read",
+      label: "Want to Read",
+      filterFn: (item) => item.status === "want_to_read",
+    },
+    { id: "read", label: "Read", filterFn: (item) => item.status === "read" },
+    {
+      id: "other",
+      label: "Other",
+      filterFn: (item) => item.status === "dropped" || item.status === "on_hold",
+    },
+  ],
+  recipe: [
+    { id: "want_to_cook", label: "To Cook", filterFn: (item) => item.status === "want_to_cook" },
+    { id: "cooked", label: "Cooked", filterFn: (item) => item.status === "cooked" },
+  ],
+}
+
+const CREATOR_FILTER_CONFIG: Partial<
+  Record<MediaType, { field: CreatorField; label: string; plural: string }>
+> = {
+  book: { field: "author", label: "Author", plural: "authors" },
+  movie: { field: "director", label: "Director", plural: "directors" },
+}
+
+const SYNC_CONFIG: Partial<
+  Record<
+    MediaType,
+    {
+      label: string
+      pendingLabel: string
+      tooltip: string
+      action: (forceAll: boolean) => Promise<{ success: boolean; message: string }>
+    }
+  >
+> = {
+  series: {
+    label: "Sync Series",
+    pendingLabel: "Syncing...",
+    tooltip: "Auto-update all series with TMDB seasons and episodes",
+    action: syncAllSeriesAction,
+  },
+  movie: {
+    label: "Update Movies",
+    pendingLabel: "Updating...",
+    tooltip: "Update all movies with TMDB metadata, directors, and posters",
+    action: syncAllMoviesAction,
+  },
+}
+
+function readCreatorParams(params: Pick<URLSearchParams, "getAll">, field: CreatorField): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const raw of params.getAll(field)) {
+    const name = raw.trim()
+    const key = name.toLowerCase()
+    if (name && !seen.has(key)) {
+      seen.add(key)
+      result.push(name)
+    }
+  }
+  return result
+}
+
+function collectFacetCounts(
+  items: MediaItem[],
+  getValues: (item: MediaItem) => string[],
+  preserveSelected: string[] = []
+): FacetOption[] {
+  const map = new Map<string, FacetOption>()
+  for (const item of items) {
+    const itemSeen = new Set<string>()
+    for (const raw of getValues(item)) {
+      const name = raw.trim()
+      const key = name.toLowerCase()
+      if (!name || itemSeen.has(key)) continue
+      itemSeen.add(key)
+      const existing = map.get(key)
+      if (existing) existing.count++
+      else map.set(key, { name, count: 1 })
+    }
+  }
+  for (const selected of preserveSelected) {
+    const key = selected.toLowerCase()
+    if (!map.has(key)) map.set(key, { name: selected, count: 0 })
+  }
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function TabbedDashboardLoading({
   type,
-  items,
   title,
   accent,
   description,
-  headerNode,
-}: TabbedDashboardProps) {
-  /**
-   * Array of tab configuration objects defining filters and labels for the media dashboard.
-   */
-  let tabs: TabConfig[] = []
+}: TabbedDashboardLoadingProps) {
+  const tabs = TABS_BY_TYPE[type]
+  const hasCreatorFilter = Boolean(CREATOR_FILTER_CONFIG[type])
+  const hasSyncButton = Boolean(SYNC_CONFIG[type])
 
-  if (type === "series") {
-    tabs = [
-      { id: "watching", label: "Watching", filterFn: (item) => item.status === "watching" },
-      {
-        id: "want_to_watch",
-        label: "Want to Watch",
-        filterFn: (item) => item.status === "want_to_watch",
-      },
-      {
-        id: "waiting",
-        label: "Waiting",
-        filterFn: (item) => item.status === "watched" && item.tmdb_status === "Returning Series",
-      },
-      {
-        id: "ended",
-        label: "Ended",
-        filterFn: (item) => item.status === "watched" && item.tmdb_status !== "Returning Series",
-      },
-      {
-        id: "other",
-        label: "Other",
-        filterFn: (item) => ["dropped", "on_hold"].includes(item.status),
-      },
-    ]
-  } else if (type === "movie") {
-    tabs = [
-      {
-        id: "want_to_watch",
-        label: "Want to Watch",
-        filterFn: (item) => item.status === "want_to_watch",
-      },
-      { id: "watching", label: "Watching", filterFn: (item) => item.status === "watching" },
-      { id: "watched", label: "Watched", filterFn: (item) => item.status === "watched" },
-      {
-        id: "other",
-        label: "Other",
-        filterFn: (item) => ["dropped", "on_hold"].includes(item.status),
-      },
-    ]
-  } else if (type === "book") {
-    tabs = [
-      { id: "reading", label: "Reading", filterFn: (item) => item.status === "reading" },
-      {
-        id: "want_to_read",
-        label: "Want to Read",
-        filterFn: (item) => item.status === "want_to_read",
-      },
-      { id: "read", label: "Read", filterFn: (item) => item.status === "read" },
-      {
-        id: "other",
-        label: "Other",
-        filterFn: (item) => ["dropped", "on_hold"].includes(item.status),
-      },
-    ]
-  } else if (type === "recipe") {
-    tabs = [
-      { id: "want_to_cook", label: "To Cook", filterFn: (item) => item.status === "want_to_cook" },
-      { id: "cooked", label: "Cooked", filterFn: (item) => item.status === "cooked" },
-    ]
-  }
+  const tabsSkeleton = (
+    <div className="bg-surface border-border custom-scrollbar flex w-full max-w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-xl border p-1 lg:w-auto">
+      {tabs.map((tab) => (
+        <Skeleton
+          key={tab.id}
+          className={`h-8 shrink-0 ${tab.label.length > 10 ? "w-28" : "w-20"}`}
+        />
+      ))}
+      <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
+      <Skeleton className="h-8 w-18 shrink-0" />
+      {hasCreatorFilter && <Skeleton className="h-8 w-22 shrink-0" />}
+      <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
+      <Skeleton className="h-8 w-32 shrink-0" />
+      {hasSyncButton && <Skeleton className="h-8 w-28 shrink-0" />}
+    </div>
+  )
 
-  // Filter out tabs that have 0 items (except the first two to keep UI consistent)
-  const activeTabs = tabs
-  /**
-   * Next.js hook for accessing the current URL search parameters.
-   */
+  return (
+    <div className="w-full" aria-label={`Loading ${type} gallery`}>
+      {title ? (
+        <PageHeader title={title} accent={accent} description={description}>
+          {tabsSkeleton}
+        </PageHeader>
+      ) : (
+        <div className="mb-6 w-full max-w-full min-w-0">{tabsSkeleton}</div>
+      )}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {[...Array(9)].map((_, i) => (
+          <MediaCardSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Tabbed interface for filtering media lists by status, tags/genres, and author/director.
+ */
+export function TabbedDashboard({ type, items, title, accent, description }: TabbedDashboardProps) {
+  const activeTabs = TABS_BY_TYPE[type]
+  const creatorConfig = CREATOR_FILTER_CONFIG[type]
+  const syncConfig = SYNC_CONFIG[type]
+
   const searchParams = useSearchParams()
-  /**
-   * Current URL pathname used to determine the active route or media type context.
-   */
   const pathname = usePathname()
 
-  const [activeTabId, setActiveTabId] = useState<string>(() => {
-    /**
-     * The currently selected tab ID extracted from the URL query string.
-     */
-    const tabParam = searchParams.get("tab")
-    /**
-     * The fallback tab ID to use if no valid tab is specified in the URL.
-     */
-    return activeTabs.some((t) => t.id === tabParam) ? (tabParam as string) : activeTabs[0]?.id
-  })
-
-  const [sortBy, setSortBy] = useState<"date_added" | "title" | "release_year" | "user_rating">(
-    "date_added"
-  )
+  const [sortBy, setSortBy] = usePersistedSort(`vault-sort-${type}`, "date_added", SORT_OPTIONS)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [isTagsOpen, setIsTagsOpen] = useState(false)
+  const [openFilter, setOpenFilter] = useState<"tags" | "creator" | null>(null)
+  const [filterQuery, setFilterQuery] = useState("")
+  const [isSyncing, setIsSyncing] = useState(false)
 
-  useEffect(() => {
-    const handlePopState = () => {
-      const currentTab = new URLSearchParams(window.location.search).get("tab")
-      if (currentTab && activeTabs.some((t) => t.id === currentTab)) {
-        setActiveTabId(currentTab)
-      }
+  const selectedCreators = useMemo(
+    () => (creatorConfig ? readCreatorParams(searchParams, creatorConfig.field) : []),
+    [searchParams, creatorConfig]
+  )
+
+  const selectedTagKeys = useMemo(
+    () => new Set(selectedTags.map((t) => t.toLowerCase())),
+    [selectedTags]
+  )
+
+  const selectedCreatorKeys = useMemo(
+    () => new Set(selectedCreators.map((c) => c.toLowerCase())),
+    [selectedCreators]
+  )
+
+  const activeTabId = useMemo(() => {
+    const tabParam = searchParams.get("tab")
+    if (tabParam && activeTabs.some((t) => t.id === tabParam)) return tabParam
+
+    if (creatorConfig && selectedCreatorKeys.size > 0) {
+      const matchingTab = activeTabs.find((tab) =>
+        items.some(
+          (item) =>
+            tab.filterFn(item) &&
+            parseCreators(item[creatorConfig.field]).some((c) =>
+              selectedCreatorKeys.has(c.toLowerCase())
+            )
+        )
+      )
+      if (matchingTab) return matchingTab.id
     }
 
-    window.addEventListener("popstate", handlePopState)
-    return () => window.removeEventListener("popstate", handlePopState)
-  }, [activeTabs])
+    return activeTabs[0]?.id ?? ""
+  }, [searchParams, activeTabs, creatorConfig, selectedCreatorKeys, items])
 
-  /**
-   * Changes the active tab, updates the URL without a route transition, and returns to the page top.
-   */
+  const syncUrl = (nextTabId: string, nextCreators: string[]) => {
+    const params = new URLSearchParams(window.location.search)
+    params.set("tab", nextTabId)
+    if (creatorConfig) {
+      params.delete(creatorConfig.field)
+      nextCreators.forEach((c) => params.append(creatorConfig.field, c))
+    }
+    const query = params.toString()
+    window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname)
+  }
+
   const handleTabChange = (tabId: string) => {
-    setActiveTabId(tabId)
     setSelectedTags([])
-    /**
-     * Mutable URLSearchParams instance used to construct the updated URL query string.
-     */
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("tab", tabId)
-    window.history.replaceState(window.history.state, "", `${pathname}?${params.toString()}`)
+    setFilterQuery("")
+    syncUrl(tabId, selectedCreators)
     window.scrollTo({ top: 0, behavior: "auto" })
   }
 
-  const [isSyncing, setIsSyncing] = useState(false)
+  const toggleTag = (tag: string) => {
+    const key = tag.toLowerCase()
+    setSelectedTags((prev) =>
+      prev.some((t) => t.toLowerCase() === key)
+        ? prev.filter((t) => t.toLowerCase() !== key)
+        : [...prev, tag]
+    )
+  }
 
-  const handleSyncSeries = async () => {
+  const toggleCreator = (name: string) => {
+    const key = name.toLowerCase()
+    const next = selectedCreatorKeys.has(key)
+      ? selectedCreators.filter((c) => c.toLowerCase() !== key)
+      : [...selectedCreators, name]
+    syncUrl(activeTabId, next)
+  }
+
+  const clearCreators = () => {
+    setFilterQuery("")
+    syncUrl(activeTabId, [])
+  }
+
+  const clearAllFilters = () => {
+    setSelectedTags([])
+    setFilterQuery("")
+    syncUrl(activeTabId, [])
+  }
+
+  const handleSync = async () => {
+    if (!syncConfig) return
     setIsSyncing(true)
     try {
-      const res = await syncAllSeriesAction(true)
+      const res = await syncConfig.action(true)
       if (res.success) {
         toast.success(res.message)
       } else {
-        toast.error(res.message || "Failed to update series")
+        toast.error(res.message || `Failed to ${syncConfig.label.toLowerCase()}`)
       }
-    } catch (err: any) {
-      toast.error("Failed to update series: " + (err?.message || "Unknown error"))
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error"
+      toast.error(`Failed to ${syncConfig.label.toLowerCase()}: ${msg}`)
     } finally {
       setIsSyncing(false)
     }
   }
 
-  /**
-   * Triggers a batch metadata update across all movies in the vault via TMDB API.
-   */
-  const handleSyncMovies = async () => {
-    setIsSyncing(true)
-    try {
-      const res = await syncAllMoviesAction(true)
-      if (res.success) {
-        toast.success(res.message)
-      } else {
-        toast.error(res.message || "Failed to update movies")
-      }
-    } catch (err: any) {
-      toast.error("Failed to update movies: " + (err?.message || "Unknown error"))
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
-  /**
-   * The currently active tab configuration object based on state or URL.
-   */
   const activeTab = activeTabs.find((t) => t.id === activeTabId) || activeTabs[0]
 
-  /**
-   * Memoized array of media items filtered by the active tab and selected tags, and sorted by user preference.
-   */
+  const tabItems = useMemo(() => items.filter(activeTab.filterFn), [items, activeTab])
+
+  const availableTags = useMemo(
+    () => collectFacetCounts(tabItems, (item) => [...(item.tags || []), ...(item.genres || [])]),
+    [tabItems]
+  )
+
+  const availableCreators = useMemo(
+    () =>
+      creatorConfig
+        ? collectFacetCounts(
+            tabItems,
+            (item) => parseCreators(item[creatorConfig.field]),
+            selectedCreators
+          )
+        : [],
+    [tabItems, creatorConfig, selectedCreators]
+  )
+
   const filteredItems = useMemo(() => {
-    /**
-     * Intermediate array holding the filtered media items before applying tags and sorting.
-     */
-    let result = items.filter(activeTab.filterFn)
+    let result = tabItems
 
     if (selectedTags.length > 0) {
       result = result.filter((item) => {
-        const itemTags = [...(item.tags || []), ...(item.genres || [])]
-        return selectedTags.every((t) => itemTags.includes(t))
+        const itemTagKeys = new Set(
+          [...(item.tags || []), ...(item.genres || [])]
+            .map((t) => t.trim().toLowerCase())
+            .filter(Boolean)
+        )
+        return selectedTags.every((t) => itemTagKeys.has(t.toLowerCase()))
       })
     }
 
-    return result.sort((a, b) => {
+    if (creatorConfig && selectedCreatorKeys.size > 0) {
+      result = result.filter((item) =>
+        parseCreators(item[creatorConfig.field]).some((c) =>
+          selectedCreatorKeys.has(c.toLowerCase())
+        )
+      )
+    }
+
+    return [...result].sort((a, b) => {
       if (sortBy === "title") return a.title.localeCompare(b.title)
       if (sortBy === "release_year") return (b.release_year || 0) - (a.release_year || 0)
       if (sortBy === "user_rating") return (b.user_rating || 0) - (a.user_rating || 0)
       return new Date(b.date_added).getTime() - new Date(a.date_added).getTime()
     })
-  }, [items, activeTab, selectedTags, sortBy])
+  }, [tabItems, selectedTags, creatorConfig, selectedCreatorKeys, sortBy])
 
-  /**
-   * Aggregates all unique user tags and TMDB genres present in the currently filtered tab's items.
-   */
-  const availableTags = useMemo(() => {
-    const set = new Set<string>()
-    items.filter(activeTab.filterFn).forEach((item) => {
-      item.tags?.forEach((t) => t && set.add(t))
-      item.genres?.forEach((g) => g && set.add(g))
-    })
-    return Array.from(set).sort((a, b) => a.localeCompare(b))
-  }, [items, activeTab])
+  const showTagsFilter = availableTags.length > 0 || selectedTags.length > 0
+  const showCreatorFilter =
+    Boolean(creatorConfig) && (availableCreators.length > 0 || selectedCreators.length > 0)
+
+  const activeTray =
+    openFilter === "tags" && showTagsFilter
+      ? {
+          label: "tag",
+          plural: "tags",
+          options: availableTags,
+          selectedKeys: selectedTagKeys,
+          onToggle: toggleTag,
+          onClear: () => {
+            setFilterQuery("")
+            setSelectedTags([])
+          },
+        }
+      : openFilter === "creator" && showCreatorFilter && creatorConfig
+        ? {
+            label: creatorConfig.label.toLowerCase(),
+            plural: creatorConfig.plural,
+            options: availableCreators,
+            selectedKeys: selectedCreatorKeys,
+            onToggle: toggleCreator,
+            onClear: clearCreators,
+          }
+        : null
+
+  const normalizedQuery = filterQuery.trim().toLowerCase()
+  const visibleTrayOptions = activeTray
+    ? normalizedQuery
+      ? activeTray.options.filter((o) => o.name.toLowerCase().includes(normalizedQuery))
+      : activeTray.options
+    : []
+
+  const filterToggles = [
+    ...(showTagsFilter
+      ? [
+          {
+            id: "tags" as const,
+            label: "Tags",
+            count: selectedTags.length,
+            tooltip: "Filter by tags or genres",
+          },
+        ]
+      : []),
+    ...(showCreatorFilter && creatorConfig
+      ? [
+          {
+            id: "creator" as const,
+            label: creatorConfig.label,
+            count: selectedCreators.length,
+            tooltip: `Filter by ${creatorConfig.label.toLowerCase()}`,
+          },
+        ]
+      : []),
+  ]
+
+  const activeChips = [
+    ...selectedTags.map((tag) => ({
+      key: `tag-${tag}`,
+      label: `Tag: ${tag}`,
+      onRemove: () => toggleTag(tag),
+    })),
+    ...(creatorConfig
+      ? selectedCreators.map((creator) => ({
+          key: `creator-${creator}`,
+          label: `${creatorConfig.label}: ${creator}`,
+          onRemove: () => toggleCreator(creator),
+        }))
+      : []),
+  ]
+
+  const hasActiveFilters = activeChips.length > 0
+
+  const emptyParts: string[] = []
+  if (selectedTags.length > 0) emptyParts.push("selected tags")
+  if (creatorConfig && selectedCreators.length > 0) {
+    emptyParts.push(`${creatorConfig.label.toLowerCase()} (${selectedCreators.join(", ")})`)
+  }
+
+  const pillClass = (isSelected: boolean) =>
+    `inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+      isSelected
+        ? "bg-primary/20 text-primary border-primary/40 font-semibold shadow-2xs"
+        : "bg-surface text-muted border-border hover:border-primary hover:text-foreground"
+    }`
 
   const tabsControls = (
     <div className="bg-surface border-border custom-scrollbar flex w-full max-w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto rounded-xl border p-1 lg:w-auto">
@@ -323,29 +508,41 @@ export function TabbedDashboard({
 
       <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
 
-      {/* Tags Filter Toggle */}
-      {availableTags.length > 0 && (
+      {/* Collapsible Filter Toggles (Tags, Author / Director) */}
+      {filterToggles.length > 0 && (
         <>
-          <button
-            type="button"
-            onClick={() => setIsTagsOpen((prev) => !prev)}
-            className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
-              selectedTags.length > 0 || isTagsOpen
-                ? "bg-primary/15 text-primary border-primary/35 border font-semibold shadow-xs"
-                : "text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent"
-            }`}
-          >
-            <span>Tags</span>
-            {selectedTags.length > 0 && (
-              <span className="bg-primary/25 text-primary flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">
-                {selectedTags.length}
-              </span>
-            )}
-            <KeyboardArrowDownIcon
-              sx={{ fontSize: 15 }}
-              className={`transition-transform duration-200 ${isTagsOpen ? "rotate-180" : ""}`}
-            />
-          </button>
+          {filterToggles.map((toggle) => {
+            const isOpen = openFilter === toggle.id
+            const isHighlighted = toggle.count > 0 || isOpen
+            return (
+              <VaultTooltip key={toggle.id} label={toggle.tooltip} placement="bottom">
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => {
+                    setFilterQuery("")
+                    setOpenFilter((prev) => (prev === toggle.id ? null : toggle.id))
+                  }}
+                  className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
+                    isHighlighted
+                      ? "bg-primary/15 text-primary border-primary/35 border font-semibold shadow-xs"
+                      : "text-muted hover:text-foreground hover:bg-surface-elevated border border-transparent"
+                  }`}
+                >
+                  <span>{toggle.label}</span>
+                  {toggle.count > 0 && (
+                    <span className="bg-primary/25 text-primary flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">
+                      {toggle.count}
+                    </span>
+                  )}
+                  <KeyboardArrowDownIcon
+                    sx={{ fontSize: 15 }}
+                    className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+              </VaultTooltip>
+            )
+          })}
           <div className="bg-border mx-0.5 h-4 w-px shrink-0" />
         </>
       )}
@@ -354,7 +551,7 @@ export function TabbedDashboard({
       <FormControl size="small" className="shrink-0">
         <Select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as any)}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
           displayEmpty
           sx={{
             height: 32,
@@ -401,15 +598,11 @@ export function TabbedDashboard({
         </Select>
       </FormControl>
 
-      {type === "series" && (
-        <VaultTooltip
-          label="Auto-update all series with TMDB seasons and episodes"
-          enabled={!isSyncing}
-          placement="bottom"
-        >
+      {syncConfig && (
+        <VaultTooltip label={syncConfig.tooltip} enabled={!isSyncing} placement="bottom">
           <button
             type="button"
-            onClick={handleSyncSeries}
+            onClick={handleSync}
             disabled={isSyncing}
             className="border-border text-muted hover:text-foreground hover:bg-surface-elevated/80 flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-50"
           >
@@ -417,28 +610,9 @@ export function TabbedDashboard({
               sx={{ fontSize: 14 }}
               className={isSyncing ? "text-primary animate-spin" : "text-primary"}
             />
-            <span className="hidden sm:inline">{isSyncing ? "Syncing..." : "Sync Series"}</span>
-          </button>
-        </VaultTooltip>
-      )}
-
-      {type === "movie" && (
-        <VaultTooltip
-          label="Update all movies with TMDB metadata, directors, and posters"
-          enabled={!isSyncing}
-          placement="bottom"
-        >
-          <button
-            type="button"
-            onClick={handleSyncMovies}
-            disabled={isSyncing}
-            className="border-border text-muted hover:text-foreground hover:bg-surface-elevated/80 flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all disabled:opacity-50"
-          >
-            <SyncIcon
-              sx={{ fontSize: 14 }}
-              className={isSyncing ? "text-primary animate-spin" : "text-primary"}
-            />
-            <span className="hidden sm:inline">{isSyncing ? "Updating..." : "Update Movies"}</span>
+            <span className="hidden sm:inline">
+              {isSyncing ? syncConfig.pendingLabel : syncConfig.label}
+            </span>
           </button>
         </VaultTooltip>
       )}
@@ -451,54 +625,120 @@ export function TabbedDashboard({
         <PageHeader title={title} accent={accent} description={description}>
           {tabsControls}
         </PageHeader>
-      ) : headerNode ? (
-        <div className="border-border mb-6 border-b pb-4">
-          <div className="flex min-w-0 flex-col justify-between gap-4 lg:flex-row lg:items-end">
-            {headerNode}
-            <div className="flex w-full max-w-full min-w-0 items-center lg:w-auto">
-              {tabsControls}
-            </div>
-          </div>
-        </div>
       ) : (
         <div className="mb-6 w-full max-w-full min-w-0">{tabsControls}</div>
       )}
 
-      {/* Expanded Tag Filters Tray */}
-      {availableTags.length > 0 && isTagsOpen && (
-        <div className="animate-fade-in border-border bg-surface/80 mb-6 flex flex-wrap items-center gap-1.5 rounded-xl border p-2.5 shadow-2xs">
-          <span className="text-muted mr-1 font-mono text-[11px] font-semibold tracking-wider uppercase">
-            Filter by tag:
-          </span>
-          {availableTags.map((tag) => {
-            const isSelected = selectedTags.includes(tag)
-            return (
-              <button
-                key={tag}
-                onClick={() =>
-                  setSelectedTags((prev) =>
-                    isSelected ? prev.filter((t) => t !== tag) : [...prev, tag]
-                  )
-                }
-                className={`cursor-pointer rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
-                  isSelected
-                    ? "bg-primary/20 text-primary border-primary/40 font-semibold shadow-2xs"
-                    : "bg-surface text-muted border-border hover:border-primary hover:text-foreground"
-                }`}
-              >
-                {tag}
-              </button>
-            )
-          })}
-          {selectedTags.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelectedTags([])}
-              className="text-muted hover:text-foreground ml-auto cursor-pointer text-xs underline"
-            >
-              Clear filters
-            </button>
+      {/* Expanded Searchable Filter Tray (Tags or Author / Director) */}
+      {activeTray && (
+        <div className="animate-fade-in border-border bg-surface/80 mb-6 flex flex-col gap-2.5 rounded-xl border p-3 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-muted font-mono text-[11px] font-semibold tracking-wider uppercase">
+              Filter by {activeTray.label}:
+            </span>
+
+            <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+              <div className="relative flex-1 sm:w-56 sm:flex-initial">
+                <SearchIcon
+                  sx={{ fontSize: 15 }}
+                  className="text-muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
+                />
+                <input
+                  type="text"
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && visibleTrayOptions.length === 1) {
+                      e.preventDefault()
+                      activeTray.onToggle(visibleTrayOptions[0].name)
+                    } else if (e.key === "Escape") {
+                      if (filterQuery) setFilterQuery("")
+                      else setOpenFilter(null)
+                    }
+                  }}
+                  placeholder={`Search ${activeTray.plural}...`}
+                  aria-label={`Search ${activeTray.plural}`}
+                  className="bg-background border-border text-foreground placeholder:text-muted focus:border-primary focus:ring-primary/25 h-7 w-full rounded-lg border pr-7 pl-8 text-xs transition-colors focus:ring-2 focus:outline-none"
+                />
+                {filterQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterQuery("")}
+                    aria-label={`Clear ${activeTray.label} search`}
+                    className="text-muted hover:text-foreground absolute top-1/2 right-1.5 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded transition-colors"
+                  >
+                    <CloseIcon sx={{ fontSize: 13 }} className="text-current" />
+                  </button>
+                )}
+              </div>
+
+              {activeTray.selectedKeys.size > 0 && (
+                <button
+                  type="button"
+                  onClick={activeTray.onClear}
+                  className="border-border bg-surface hover:bg-surface-elevated text-muted hover:border-primary/40 hover:text-foreground inline-flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-lg border px-2.5 text-xs font-medium transition-colors"
+                >
+                  <CloseIcon sx={{ fontSize: 13 }} className="text-current" />
+                  <span>Clear</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {visibleTrayOptions.length > 0 ? (
+            <div className="custom-scrollbar flex max-h-44 flex-wrap items-center gap-1.5 overflow-y-auto">
+              {visibleTrayOptions.map(({ name, count }) => {
+                const isSelected = activeTray.selectedKeys.has(name.toLowerCase())
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => activeTray.onToggle(name)}
+                    className={pillClass(isSelected)}
+                  >
+                    <span>{name}</span>
+                    <span
+                      className={`font-mono text-[10px] ${isSelected ? "text-primary" : "text-muted/70"}`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-muted py-1 text-xs">
+              No {activeTray.plural} matching &ldquo;{filterQuery}&rdquo;.
+            </p>
           )}
+        </div>
+      )}
+
+      {/* Active Filter Chips when Tray is Collapsed */}
+      {openFilter === null && hasActiveFilters && (
+        <div className="animate-fade-in mb-5 flex flex-wrap items-center gap-1.5">
+          <span className="text-muted mr-1 font-mono text-[11px] font-semibold tracking-wider uppercase">
+            Active:
+          </span>
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.onRemove}
+              className="bg-primary/15 text-primary border-primary/35 hover:bg-primary/25 inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors"
+            >
+              <span>{chip.label}</span>
+              <CloseIcon sx={{ fontSize: 12 }} className="text-current" aria-hidden="true" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="border-border bg-surface hover:bg-surface-elevated text-muted hover:border-primary/40 hover:text-foreground inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors"
+          >
+            <CloseIcon sx={{ fontSize: 12 }} className="text-current" aria-hidden="true" />
+            <span>Clear all</span>
+          </button>
         </div>
       )}
 
@@ -506,7 +746,7 @@ export function TabbedDashboard({
       <MediaGrid
         items={filteredItems}
         emptyMessage={`No items found in ${activeTab.label.toLowerCase()}${
-          selectedTags.length > 0 ? " with selected tags" : ""
+          emptyParts.length > 0 ? ` matching ${emptyParts.join(" and ")}` : ""
         }.`}
       />
     </div>

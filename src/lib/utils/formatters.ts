@@ -62,3 +62,22 @@ export function formatSynopsis(text: string | null | undefined): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim()
 }
+
+/**
+ * Splits a comma-separated author or director string into trimmed, deduplicated names
+ * while preserving trailing suffixes such as "Jr." or "III".
+ */
+export function parseCreators(value: string | null | undefined): string[] {
+  if (!value) return []
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const part of value.split(/,\s*(?!(?:Jr|Sr|II|III|IV|V|Ph\.?D)\.?(?:\s*,|\s*$))/i)) {
+    const name = part.trim()
+    const key = name.toLowerCase()
+    if (name && !seen.has(key)) {
+      seen.add(key)
+      result.push(name)
+    }
+  }
+  return result
+}

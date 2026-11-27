@@ -15,6 +15,7 @@ import {
   getCoverPlaceholder,
   getOptimizedCoverUrl,
   formatSynopsis,
+  parseCreators,
 } from "@/lib/utils/formatters"
 import Link from "next/link"
 import { ProgressLogger } from "./ProgressLogger"
@@ -40,6 +41,13 @@ import ReactMarkdown from "react-markdown"
  */
 export interface MediaDetailProps {
   item: MediaItem
+}
+
+const CREATOR_LINK_CONFIG: Partial<
+  Record<MediaItem["type"], { path: string; param: string; prefix: string; targetLabel: string }>
+> = {
+  book: { path: "/books", param: "author", prefix: "By ", targetLabel: "books" },
+  movie: { path: "/movies", param: "director", prefix: "Directed by ", targetLabel: "movies" },
 }
 
 /**
@@ -99,8 +107,9 @@ export function MediaDetail({ item }: MediaDetailProps) {
       } else {
         toast.error(res.message)
       }
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update movie")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update movie"
+      toast.error(msg)
     } finally {
       setIsRefreshing(false)
     }
@@ -243,16 +252,50 @@ export function MediaDetail({ item }: MediaDetailProps) {
                     {item.release_year}
                   </span>
                 )}
-                {(item.author ?? item.director) && (
-                  <span className="text-primary font-medium">
-                    {item.type === "recipe"
-                      ? "Source: "
-                      : item.type === "book"
-                        ? "By "
-                        : "Directed by "}{" "}
-                    {item.author ?? item.director}
-                  </span>
-                )}
+                {(item.author ?? item.director) &&
+                  (() => {
+                    const creatorText = item.author ?? item.director ?? ""
+                    const linkConfig = CREATOR_LINK_CONFIG[item.type]
+                    const creators = linkConfig ? parseCreators(creatorText) : []
+                    const targetTab =
+                      currentStatus === "dropped" || currentStatus === "on_hold"
+                        ? "other"
+                        : currentStatus
+
+                    if (linkConfig && creators.length > 0) {
+                      return (
+                        <span className="text-primary font-medium">
+                          {linkConfig.prefix}
+                          {creators.map((creator, index) => (
+                            <span key={creator}>
+                              {index > 0 && ", "}
+                              <VaultTooltip
+                                label={`Filter ${linkConfig.targetLabel} by ${creator}`}
+                              >
+                                <Link
+                                  href={`${linkConfig.path}?tab=${targetTab}&${linkConfig.param}=${encodeURIComponent(creator)}`}
+                                  className="hover:text-accent decoration-primary/40 underline underline-offset-4 transition-colors"
+                                >
+                                  {creator}
+                                </Link>
+                              </VaultTooltip>
+                            </span>
+                          ))}
+                        </span>
+                      )
+                    }
+
+                    return (
+                      <span className="text-primary font-medium">
+                        {item.type === "recipe"
+                          ? "Source: "
+                          : item.type === "book"
+                            ? "By "
+                            : "Directed by "}{" "}
+                        {creatorText}
+                      </span>
+                    )
+                  })()}
               </div>
             </div>
 

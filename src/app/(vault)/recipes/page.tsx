@@ -7,7 +7,6 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 import { getMediaList } from "@/lib/services/mediaService"
 import { TabbedDashboard, TabbedDashboardLoading } from "@/components/media/TabbedDashboard"
-import { MediaCardSkeleton } from "@/components/ui/Skeleton"
 
 /**
  * Metadata configuration for the recipes gallery page.
@@ -48,19 +47,12 @@ export default function RecipesPage() {
     <div className="animate-fade-in">
       <Suspense
         fallback={
-          <div>
-            <TabbedDashboardLoading
-              title="Recipes"
-              accent="cookbook"
-              description="Culinary collection & kitchen notes."
-              tabs={["Want to Cook", "Cooked", "Other"]}
-            />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {[...Array(9)].map((_, i) => (
-                <MediaCardSkeleton key={i} />
-              ))}
-            </div>
-          </div>
+          <TabbedDashboardLoading
+            type="recipe"
+            title="Recipes"
+            accent="cookbook"
+            description="Culinary collection & kitchen notes."
+          />
         }
       >
         <RecipesList />
