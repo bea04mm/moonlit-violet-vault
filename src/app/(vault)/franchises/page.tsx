@@ -7,6 +7,7 @@
 import { Suspense } from "react"
 import type { Metadata } from "next"
 import { FranchisesIndexView, type FranchiseCardData } from "@/components/franchises/FranchisesIndexView"
+import { FranchisesIndexSkeleton } from "@/components/ui/Skeleton"
 import {
   getAllFranchisesAction,
   getFranchiseItemsWithVault,
@@ -14,7 +15,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Franchises · Moonlit Violet Vault",
-  description: "Chronological master franchise archives and viewing checklists for Marvel, DC, and custom sagas.",
+  description: "Chronological master franchise archives and viewing checklists.",
 }
 
 /**
@@ -41,12 +42,7 @@ async function FranchisesHubLoader() {
         .map((i) => i.coverUrl as string)
 
       return {
-        id: f.id,
-        name: f.name,
-        shortName: f.shortName,
-        tagline: f.tagline,
-        accentColor: f.accentColor,
-        isCustom: Boolean(f.isCustom),
+        ...f,
         totalCount: items.length,
         inVaultCount: data.inVaultCount || 0,
         watchedCount,
@@ -65,7 +61,7 @@ async function FranchisesHubLoader() {
 export default function FranchisesPage() {
   return (
     <div className="animate-fade-in">
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-2xl bg-surface/50" />}>
+      <Suspense fallback={<FranchisesIndexSkeleton />}>
         <FranchisesHubLoader />
       </Suspense>
     </div>

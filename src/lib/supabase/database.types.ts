@@ -114,7 +114,7 @@ export interface MediaItem {
 }
 
 /**
- * Type definition for custom franchise records stored in Supabase.
+ * Type definition for franchise records stored in Supabase.
  */
 export interface FranchiseRow {
   /** Unique primary key identifier slug (e.g. 'marvel', 'dc', 'star-wars') */

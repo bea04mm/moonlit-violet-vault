@@ -23,12 +23,13 @@ import {
   searchTmdbForLinking,
   manuallyConnectFranchiseTmdbAction,
   disconnectFranchiseTmdbAction,
-  deleteCustomFranchiseAction,
+  deleteFranchiseAction,
   saveFranchiseItemAction,
   deleteFranchiseItemAction,
   TmdbSearchResultItem,
   FranchiseSummary,
 } from "@/lib/actions/franchiseAiActions"
+import { AddFranchiseModal } from "@/components/franchises/AddFranchiseModal"
 import { FranchiseItemEditorModal } from "@/components/franchises/FranchiseItemEditorModal"
 import type { MediaType } from "@/lib/supabase/database.types"
 import { toast } from "sonner"
@@ -53,6 +54,9 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack"
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { VaultTooltip } from "@/components/ui/VaultTooltip"
+import { usePersistedSort } from "@/lib/utils/usePersistedSort"
+
+const CHECKLIST_SORT_OPTIONS = ["year-asc", "year-desc", "catalog"] as const
 
 /**
  * Component props for {@link FranchiseDashboard}.
@@ -144,29 +148,12 @@ export function FranchiseDashboard({
 }: FranchiseDashboardProps) {
   const router = useRouter()
   const [franchises, setFranchises] = useState<FranchiseSummary[]>(() => {
-    if (initialFranchises && initialFranchises.length > 0) {
-      const map = new Map<string, FranchiseSummary>()
-      initialFranchises.forEach((f) => map.set(f.id, f))
-      return Array.from(map.values())
-    }
-    return [
-      {
-        id: "marvel",
-        name: "Marvel Cinematic Universe & Multiverse",
-        shortName: "Marvel",
-        tagline: "From Iron Man to the Multiverse Saga, SSU, Fox X-Men and classic animation.",
-        accentColor: "#8B6CE8",
-      },
-      {
-        id: "dc",
-        name: "DC Universe & Multiverse Chronicles",
-        shortName: "DC",
-        tagline: "From James Gunn's DCU to Elseworlds, DCEU, Arrowverse and DCAU classics.",
-        accentColor: "#7579E7",
-      },
-    ]
+    if (!initialFranchises?.length) return []
+    const map = new Map<string, FranchiseSummary>()
+    initialFranchises.forEach((f) => map.set(f.id, f))
+    return Array.from(map.values())
   })
-  const [universe, setUniverse] = useState<string>(initialUniverse || "marvel")
+  const universe = initialUniverse || franchises[0]?.id || ""
   const [items, setItems] = useState<Record<string, FranchiseVaultItem[]>>(initialData)
   const [inVaultCounts, setInVaultCounts] = useState<Record<string, number>>(initialInVaultCounts)
   const [searchQuery, setSearchQuery] = useState("")
@@ -175,10 +162,15 @@ export function FranchiseDashboard({
   )
   const [selectedEra, setSelectedEra] = useState<string>("all")
   const [isErasOpen, setIsErasOpen] = useState(false)
-  const [sortBy, setSortBy] = useState<"year-asc" | "year-desc" | "catalog">("year-asc")
+  const [sortBy, setSortBy] = usePersistedSort(
+    "vault-sort-franchise-checklist",
+    "year-asc",
+    CHECKLIST_SORT_OPTIONS
+  )
   const [linkingItem, setLinkingItem] = useState<FranchiseVaultItem | null>(null)
   const [isAddTitleOpen, setIsAddTitleOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<FranchiseVaultItem | null>(null)
+  const [isEditFranchiseOpen, setIsEditFranchiseOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
   const [aiResult, setAiResult] = useState<AiFranchiseSyncResult | null>(null)
@@ -186,30 +178,33 @@ export function FranchiseDashboard({
   const [aiTab, setAiTab] = useState<"ai" | "markdown">("ai")
   const [isPending, startTransition] = useTransition()
 
-  const currentFranchise = franchises.find((f) => f.id === universe) ||
-    franchises[0] || {
-      id: universe,
-      name: universe,
-      shortName: universe,
-      tagline: "",
-      accentColor: "#8B6CE8",
-      isCustom: false,
-    }
-  const currentList = items[universe] || []
+  const currentFranchise = useMemo(
+    () =>
+      franchises.find((f) => f.id === universe) ||
+      franchises[0] || {
+        id: universe,
+        name: universe,
+        shortName: universe,
+        tagline: "",
+        accentColor: "#8B6CE8",
+      },
+    [franchises, universe]
+  )
+  const currentList = useMemo(() => items[universe] || [], [items, universe])
   const currentInVaultCount = inVaultCounts[universe] || 0
-  const isMarvel = universe === "marvel"
-  const brandColor = currentFranchise?.accentColor || (isMarvel ? "#8B6CE8" : "#7579E7")
+  const brandColor = currentFranchise?.accentColor || "#8B6CE8"
 
-  // Handle custom franchise deletion
-  const handleDeleteCustomFranchise = (id: string) => {
+  // Handle franchise deletion
+  const handleDeleteFranchise = (id: string) => {
     if (!confirm(`Are you sure you want to delete the "${currentFranchise.shortName}" franchise?`))
       return
 
     startTransition(async () => {
-      const res = await deleteCustomFranchiseAction(id)
+      const res = await deleteFranchiseAction(id)
       if (res.success) {
         toast.success(res.message)
         router.push("/franchises")
+        router.refresh()
       } else {
         toast.error(res.message)
       }
@@ -532,18 +527,30 @@ export function FranchiseDashboard({
           <span>All Franchises</span>
         </Link>
 
-        {currentFranchise.isCustom && (
+        <div className="flex items-center gap-2">
+          <VaultTooltip label={`Edit ${currentFranchise.shortName} details`} placement="bottom">
+            <button
+              type="button"
+              onClick={() => setIsEditFranchiseOpen(true)}
+              className="text-muted border-border/70 hover:text-foreground hover:bg-surface inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1 text-xs transition-colors"
+            >
+              <EditIcon sx={{ fontSize: 15 }} />
+              <span>Edit Franchise</span>
+            </button>
+          </VaultTooltip>
+
           <VaultTooltip label={`Delete ${currentFranchise.shortName} franchise`} placement="bottom">
             <button
               type="button"
-              onClick={() => handleDeleteCustomFranchise(currentFranchise.id)}
-              className="text-muted border-border/70 inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1 text-xs transition-colors hover:border-red-500/30 hover:text-red-400"
+              onClick={() => handleDeleteFranchise(currentFranchise.id)}
+              disabled={isPending}
+              className="text-muted border-border/70 inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1 text-xs transition-colors hover:border-red-500/30 hover:text-red-400 disabled:opacity-50"
             >
               <DeleteIcon sx={{ fontSize: 15 }} />
               <span>Delete Franchise</span>
             </button>
           </VaultTooltip>
-        )}
+        </div>
       </div>
 
       {/* Standardized Header Section */}
@@ -675,9 +682,7 @@ export function FranchiseDashboard({
               className="h-full transition-all duration-500"
               style={{
                 width: `${stats.percent}%`,
-                background: isMarvel
-                  ? "linear-gradient(90deg, #8B6CE8 0%, #9B72CF 100%)"
-                  : "linear-gradient(90deg, #7579E7 0%, #9B72CF 100%)",
+                background: `linear-gradient(90deg, ${brandColor} 0%, #9B72CF 100%)`,
               }}
             />
           </div>
@@ -1324,6 +1329,22 @@ export function FranchiseDashboard({
         availableEras={availableEras}
         accentColor={brandColor}
       />
+
+      {/* Edit Franchise Modal */}
+      {isEditFranchiseOpen && (
+        <AddFranchiseModal
+          key={currentFranchise.id}
+          isOpen
+          editingFranchise={currentFranchise}
+          onClose={() => setIsEditFranchiseOpen(false)}
+          onSuccess={(updated) => {
+            setFranchises((prev) =>
+              prev.map((f) => (f.id === updated.id ? { ...f, ...updated } : f))
+            )
+            router.refresh()
+          }}
+        />
+      )}
     </div>
   )
 }

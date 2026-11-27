@@ -1,7 +1,7 @@
 /**
  * Franchises Hub / Index View for the Moonlit Violet Vault.
- * Displays all available cinematic franchises (Marvel, DC, Wizarding World, custom sagas)
- * with progress metrics, poster previews, and dynamic creation/deletion.
+ * Displays all available cinematic franchises with progress metrics, poster previews,
+ * and dynamic creation, editing, and deletion.
  *
  * @packageDocumentation
  */
@@ -14,33 +14,38 @@ import HubIcon from "@mui/icons-material/Hub"
 import AddIcon from "@mui/icons-material/Add"
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward"
 import DeleteIcon from "@mui/icons-material/Delete"
+import EditIcon from "@mui/icons-material/Edit"
 import MovieIcon from "@mui/icons-material/Movie"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import CloudDoneIcon from "@mui/icons-material/CloudDone"
 import AccessTimeIcon from "@mui/icons-material/AccessTime"
 import SearchIcon from "@mui/icons-material/Search"
+import FormControl from "@mui/material/FormControl"
+import MenuItem from "@mui/material/MenuItem"
+import Select from "@mui/material/Select"
 import { toast } from "sonner"
 import { AddFranchiseModal } from "./AddFranchiseModal"
-import { deleteCustomFranchiseAction } from "@/lib/actions/franchiseAiActions"
+import { deleteFranchiseAction, type FranchiseSummary } from "@/lib/actions/franchiseAiActions"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { VaultTooltip } from "@/components/ui/VaultTooltip"
+import { usePersistedSort } from "@/lib/utils/usePersistedSort"
+
+/** Sort modes available on the Franchises Hub. */
+const FRANCHISE_SORT_OPTIONS = [
+  "recent",
+  "updated",
+  "name_asc",
+  "name_desc",
+  "progress_desc",
+  "titles_desc",
+  "runtime_desc",
+] as const
+type FranchiseSortOption = (typeof FRANCHISE_SORT_OPTIONS)[number]
 
 /**
  * View model representing a franchise card rendered on the Franchises Hub.
  */
-export interface FranchiseCardData {
-  /** Unique franchise slug identifier (e.g. 'marvel', 'dc', 'wizarding-world') */
-  id: string
-  /** Full official franchise title (e.g. 'Marvel Cinematic Universe') */
-  name: string
-  /** Concise badge label (e.g. 'MCU', 'DC Universe') */
-  shortName: string
-  /** High-level editorial tagline */
-  tagline: string
-  /** Hex color code used for styling badges and accents */
-  accentColor: string
-  /** Whether the franchise is user-created or part of built-in catalog */
-  isCustom: boolean
+export interface FranchiseCardData extends FranchiseSummary {
   /** Total titles in the franchise viewing checklist */
   totalCount: number
   /** Number of titles that have been added to the personal Vault */
@@ -52,6 +57,10 @@ export interface FranchiseCardData {
   /** Previews of up to 4 cover poster URLs */
   sampleCovers: string[]
 }
+
+const toTimestamp = (iso?: string) => (iso ? Date.parse(iso) || 0 : 0)
+const completionRatio = (f: FranchiseCardData) =>
+  f.totalCount > 0 ? f.watchedCount / f.totalCount : 0
 
 /**
  * Component props for {@link FranchisesIndexView}.
@@ -75,19 +84,51 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
     return Array.from(map.values())
   })
   const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = usePersistedSort(
+    "vault-sort-franchises",
+    "recent",
+    FRANCHISE_SORT_OPTIONS
+  )
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingFranchise, setEditingFranchise] = useState<FranchiseSummary | null>(null)
 
-  // Filtered list
+  // Filtered & sorted list
   const filtered = useMemo(() => {
-    if (!searchQuery.trim()) return franchises
     const q = searchQuery.toLowerCase().trim()
-    return franchises.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q) ||
-        f.shortName.toLowerCase().includes(q) ||
-        f.tagline.toLowerCase().includes(q)
-    )
-  }, [franchises, searchQuery])
+    const matches = q
+      ? franchises.filter(
+          (f) =>
+            f.name.toLowerCase().includes(q) ||
+            f.shortName.toLowerCase().includes(q) ||
+            f.tagline.toLowerCase().includes(q)
+        )
+      : [...franchises]
+
+    matches.sort((a, b) => {
+      switch (sortBy) {
+        case "recent":
+          return toTimestamp(b.createdAt) - toTimestamp(a.createdAt)
+        case "updated":
+          return toTimestamp(b.updatedAt) - toTimestamp(a.updatedAt)
+        case "name_asc":
+          return a.name.localeCompare(b.name)
+        case "name_desc":
+          return b.name.localeCompare(a.name)
+        case "progress_desc":
+          return (
+            completionRatio(b) - completionRatio(a) ||
+            b.watchedCount - a.watchedCount ||
+            a.name.localeCompare(b.name)
+          )
+        case "titles_desc":
+          return b.totalCount - a.totalCount || a.name.localeCompare(b.name)
+        case "runtime_desc":
+          return b.totalMinutes - a.totalMinutes || a.name.localeCompare(b.name)
+      }
+    })
+
+    return matches
+  }, [franchises, searchQuery, sortBy])
 
   // Aggregated totals
   const totalTitles = useMemo(
@@ -108,28 +149,37 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
   )
 
   /**
-   * Prompts the user and deletes a custom franchise from Supabase and client state.
+   * Prompts the user and deletes a franchise from Supabase and client state.
    */
   const handleDelete = async (e: React.MouseEvent, f: FranchiseCardData) => {
     e.preventDefault()
     e.stopPropagation()
     if (!confirm(`Are you sure you want to delete the "${f.name}" franchise?`)) return
 
-    const res = await deleteCustomFranchiseAction(f.id)
+    const res = await deleteFranchiseAction(f.id)
     if (res.success) {
       toast.success(res.message)
       setFranchises((prev) => prev.filter((item) => item.id !== f.id))
+      router.refresh()
     } else {
       toast.error(res.message || "Failed to delete franchise.")
     }
   }
 
   /**
-   * Callback fired after creating a custom franchise, routing immediately to its checklist.
+   * Callback fired after creating or updating a franchise.
    */
-  const handleCreated = (newFranchise: { id: string; name: string }) => {
-    toast.success(`Created "${newFranchise.name}"! Opening checklist...`)
-    router.push(`/franchises/${newFranchise.id}`)
+  const handleModalSuccess = (saved: FranchiseSummary) => {
+    if (editingFranchise) {
+      setFranchises((prev) =>
+        prev.map((item) => (item.id === saved.id ? { ...item, ...saved } : item))
+      )
+      setEditingFranchise(null)
+      router.refresh()
+      return
+    }
+    toast.success(`Created "${saved.name}"! Opening checklist...`)
+    router.push(`/franchises/${saved.id}`)
   }
 
   return (
@@ -204,19 +254,71 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
         </div>
       </section>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <SearchIcon
-          sx={{ fontSize: 18 }}
-          className="text-muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2"
-        />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Filter franchises by name, studio, or tagline..."
-          className="bg-surface border-border text-foreground placeholder:text-muted/60 focus:border-primary/50 focus:ring-primary/20 w-full rounded-xl border py-2.5 pr-4 pl-10 text-xs font-medium shadow-2xs transition-all focus:ring-2 focus:outline-hidden"
-        />
+      {/* Search & Sort Controls */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <SearchIcon
+            sx={{ fontSize: 18 }}
+            className="text-muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter franchises by name, studio, or tagline..."
+            className="bg-surface border-border text-foreground placeholder:text-muted/60 focus:border-primary/50 focus:ring-primary/20 w-full rounded-xl border py-2.5 pr-4 pl-10 text-xs font-medium shadow-2xs transition-all focus:ring-2 focus:outline-hidden"
+          />
+        </div>
+
+        <FormControl
+          size="small"
+          className="bg-surface border-border shrink-0 rounded-xl border shadow-2xs"
+        >
+          <Select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as FranchiseSortOption)}
+            inputProps={{ "aria-label": "Sort franchises" }}
+            sx={{
+              height: 36,
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              borderRadius: "0.75rem",
+              bgcolor: "transparent",
+              color: "var(--color-foreground)",
+              "&:hover": {
+                color: "var(--color-primary)",
+                bgcolor: "var(--color-surface-elevated)",
+              },
+              "&.Mui-focused": {
+                color: "var(--color-primary)",
+                bgcolor: "var(--color-surface-elevated)",
+              },
+              "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+              "&:hover .MuiOutlinedInput-notchedOutline": { border: "none" },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": { border: "none" },
+              "& .MuiSelect-select": {
+                py: "6px",
+                pl: 1.5,
+                pr: "28px !important",
+                display: "flex",
+                alignItems: "center",
+              },
+              "& .MuiSvgIcon-root": {
+                color: "var(--color-primary)",
+                fontSize: "1.1rem",
+                right: "6px",
+              },
+            }}
+          >
+            <MenuItem value="recent">Recently Added</MenuItem>
+            <MenuItem value="updated">Recently Updated</MenuItem>
+            <MenuItem value="name_asc">Name (A–Z)</MenuItem>
+            <MenuItem value="name_desc">Name (Z–A)</MenuItem>
+            <MenuItem value="progress_desc">Completion (Highest)</MenuItem>
+            <MenuItem value="titles_desc">Titles (Most)</MenuItem>
+            <MenuItem value="runtime_desc">Runtime (Longest)</MenuItem>
+          </Select>
+        </FormControl>
       </div>
 
       {/* Franchises Grid */}
@@ -261,28 +363,37 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
                       {f.shortName}
                     </span>
 
-                    <div className="flex items-center gap-1.5">
-                      {f.isCustom ? (
-                        <>
-                          <span className="text-muted bg-surface-elevated border-border rounded-sm border px-1.5 py-0.5 text-[10px] font-medium">
-                            Custom
-                          </span>
-                          <VaultTooltip label={`Delete ${f.shortName} franchise`}>
-                            <button
-                              type="button"
-                              onClick={(e) => handleDelete(e, f)}
-                              className="text-muted cursor-pointer rounded-sm p-1 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                              aria-label={`Delete ${f.shortName} franchise`}
-                            >
-                              <DeleteIcon sx={{ fontSize: 15 }} />
-                            </button>
-                          </VaultTooltip>
-                        </>
-                      ) : (
-                        <span className="text-muted bg-surface-elevated border-border rounded-sm border px-1.5 py-0.5 text-[10px] font-medium">
-                          Canon
-                        </span>
-                      )}
+                    <div className="flex items-center gap-1">
+                      <VaultTooltip label={`Edit ${f.shortName} franchise`}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setEditingFranchise({
+                              id: f.id,
+                              name: f.name,
+                              shortName: f.shortName,
+                              tagline: f.tagline,
+                              accentColor: f.accentColor,
+                            })
+                          }}
+                          className="text-muted hover:text-foreground hover:bg-surface-elevated cursor-pointer rounded-sm p-1 transition-colors"
+                          aria-label={`Edit ${f.shortName} franchise`}
+                        >
+                          <EditIcon sx={{ fontSize: 15 }} />
+                        </button>
+                      </VaultTooltip>
+                      <VaultTooltip label={`Delete ${f.shortName} franchise`}>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDelete(e, f)}
+                          className="text-muted cursor-pointer rounded-sm p-1 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                          aria-label={`Delete ${f.shortName} franchise`}
+                        >
+                          <DeleteIcon sx={{ fontSize: 15 }} />
+                        </button>
+                      </VaultTooltip>
                     </div>
                   </div>
 
@@ -357,12 +468,17 @@ export function FranchisesIndexView({ initialFranchises }: FranchisesIndexViewPr
         </div>
       )}
 
-      {/* Add Franchise Modal */}
-      {isAddModalOpen && (
+      {/* Add / Edit Franchise Modal */}
+      {(isAddModalOpen || Boolean(editingFranchise)) && (
         <AddFranchiseModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSuccess={handleCreated}
+          key={editingFranchise?.id ?? "new"}
+          isOpen
+          editingFranchise={editingFranchise}
+          onClose={() => {
+            setIsAddModalOpen(false)
+            setEditingFranchise(null)
+          }}
+          onSuccess={handleModalSuccess}
         />
       )}
     </div>

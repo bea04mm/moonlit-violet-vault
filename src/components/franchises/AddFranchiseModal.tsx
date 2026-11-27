@@ -1,7 +1,7 @@
 /**
- * Modal dialog for creating new cinematic universes and viewing checklists.
- * Supports automated AI slate generation via Gemini 3.8 Flash as well as direct
- * Markdown checklist importing.
+ * Modal dialog for creating or editing cinematic universes and viewing checklists.
+ * Supports automated AI slate generation, direct Markdown checklist importing,
+ * and editing existing franchise metadata.
  *
  * @packageDocumentation
  */
@@ -14,10 +14,12 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome"
 import CloseIcon from "@mui/icons-material/Close"
 import CheckIcon from "@mui/icons-material/Check"
 import ContentPasteIcon from "@mui/icons-material/ContentPaste"
+import EditIcon from "@mui/icons-material/Edit"
 import MovieIcon from "@mui/icons-material/Movie"
 import {
   generateFranchiseWithAIAction,
-  createCustomFranchiseAction,
+  createFranchiseAction,
+  updateFranchiseAction,
   FranchiseSummary,
 } from "@/lib/actions/franchiseAiActions"
 
@@ -29,34 +31,67 @@ interface AddFranchiseModalProps {
   isOpen: boolean
   /** Callback to close the modal */
   onClose: () => void
-  /** Callback fired upon successful franchise creation */
-  onSuccess: (newFranchise: FranchiseSummary) => void
+  /** Callback fired upon successful franchise creation or update */
+  onSuccess: (franchise: FranchiseSummary) => void
+  /** Existing franchise to edit; when omitted, creates a new franchise */
+  editingFranchise?: FranchiseSummary | null
 }
 
 /**
  * Quick-start preset franchises with curated titles and color themes.
  */
 const PRESET_SUGGESTIONS = [
-  { name: "Star Wars", color: "#E5B842", notes: "Complete chronological canon and legends saga" },
-  { name: "Wizarding World", color: "#85144b", notes: "Harry Potter and Fantastic Beasts films" },
+  {
+    name: "Marvel Cinematic Universe",
+    shortName: "Marvel",
+    color: "#8B6CE8",
+    notes: "MCU phases, Marvel Television, SSU, Fox X-Men, and classic animation",
+  },
+  {
+    name: "DC Universe",
+    shortName: "DC",
+    color: "#7579E7",
+    notes: "DCU, Elseworlds, DCEU, Arrowverse, and DC animated classics",
+  },
+  {
+    name: "Star Wars",
+    shortName: "Star Wars",
+    color: "#E5B842",
+    notes: "Complete chronological canon and legends saga",
+  },
+  {
+    name: "Wizarding World",
+    shortName: "Wizarding World",
+    color: "#85144b",
+    notes: "Harry Potter and Fantastic Beasts films",
+  },
   {
     name: "Middle-earth",
+    shortName: "Middle-earth",
     color: "#2ECC40",
     notes: "The Lord of the Rings and The Hobbit in chronological order",
   },
   {
     name: "James Bond 007",
+    shortName: "James Bond 007",
     color: "#0074D9",
     notes: "EON Productions Bond films from Dr. No to No Time to Die",
   },
   {
     name: "Doctor Who",
+    shortName: "Doctor Who",
     color: "#00BCD4",
     notes: "Modern revival series and specials from 2005 onwards",
   },
-  { name: "MonsterVerse", color: "#9B59B6", notes: "Godzilla and Kong cinematic universe" },
+  {
+    name: "MonsterVerse",
+    shortName: "MonsterVerse",
+    color: "#9B59B6",
+    notes: "Godzilla and Kong cinematic universe",
+  },
   {
     name: "Alien & Predator",
+    shortName: "Alien & Predator",
     color: "#607D8B",
     notes: "Complete Alien and Predator chronological timeline",
   },
@@ -77,16 +112,25 @@ const COLOR_PALETTE = [
 ]
 
 /**
- * Dialog component for adding custom cinematic franchises via Gemini AI generation
- * or raw Markdown checklist import.
+ * Dialog component for adding franchises (via Gemini AI or Markdown import)
+ * or editing an existing franchise's metadata.
  *
  * @param props - Component properties
  */
-export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseModalProps) {
+export function AddFranchiseModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  editingFranchise,
+}: AddFranchiseModalProps) {
+  const isEditing = Boolean(editingFranchise)
+
   const [tab, setTab] = useState<"ai" | "markdown">("ai")
-  const [name, setName] = useState("")
-  const [shortName, setShortName] = useState("")
-  const [accentColor, setAccentColor] = useState("#E5B842")
+  const [name, setName] = useState(editingFranchise?.name ?? "")
+  const [shortName, setShortName] = useState(editingFranchise?.shortName ?? "")
+  const [shortNameEdited, setShortNameEdited] = useState(Boolean(editingFranchise))
+  const [tagline, setTagline] = useState(editingFranchise?.tagline ?? "")
+  const [accentColor, setAccentColor] = useState(editingFranchise?.accentColor ?? "#E5B842")
   const [notes, setNotes] = useState("")
   const [markdownText, setMarkdownText] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -95,9 +139,41 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
 
   const handleSelectPreset = (preset: (typeof PRESET_SUGGESTIONS)[0]) => {
     setName(preset.name)
-    setShortName(preset.name.slice(0, 14))
+    setShortName(preset.shortName)
+    setShortNameEdited(true)
     setAccentColor(preset.color)
     setNotes(preset.notes)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingFranchise) return
+    if (!name.trim() || !shortName.trim()) {
+      toast.error("Please provide both a franchise name and short label.")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const res = await updateFranchiseAction({
+        id: editingFranchise.id,
+        name: name.trim(),
+        shortName: shortName.trim(),
+        tagline: tagline.trim(),
+        accentColor,
+      })
+
+      if (res.success && res.franchise) {
+        toast.success(res.message)
+        onSuccess(res.franchise)
+        onClose()
+      } else {
+        toast.error(res.message || "Failed to update franchise.")
+      }
+    } catch {
+      toast.error("An error occurred while updating the franchise.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleGenerateAI = async () => {
@@ -140,9 +216,10 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
 
     setIsLoading(true)
     try {
-      const res = await createCustomFranchiseAction({
+      const res = await createFranchiseAction({
         name: name.trim(),
-        shortName: shortName.trim() || name.trim().slice(0, 14),
+        shortName: shortName.trim() || name.trim().slice(0, 20),
+        tagline: tagline.trim() || undefined,
         accentColor,
         markdown: markdownText,
       })
@@ -171,18 +248,21 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
               className="flex h-8 w-8 items-center justify-center rounded-lg"
               style={{ backgroundColor: `${accentColor}26`, color: accentColor }}
             >
-              <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+              {isEditing ? <EditIcon sx={{ fontSize: 18 }} /> : <AutoAwesomeIcon sx={{ fontSize: 18 }} />}
             </div>
             <div>
               <h2 className="font-display text-foreground text-base font-bold sm:text-lg">
-                Add New Franchise
+                {isEditing ? "Edit Franchise" : "Add New Franchise"}
               </h2>
               <p className="text-muted text-xs">
-                Create a viewing checklist with AI research or paste Markdown.
+                {isEditing
+                  ? "Update the franchise title, badge label, tagline, or accent color."
+                  : "Create a viewing checklist with AI research or paste Markdown."}
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-muted hover:text-foreground rounded-lg p-1 transition-colors"
           >
@@ -190,36 +270,38 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
           </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="bg-background border-border flex rounded-xl border p-1 text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => setTab("ai")}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 transition-all ${
-              tab === "ai"
-                ? "bg-primary text-primary-fg shadow-xs"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            <AutoAwesomeIcon sx={{ fontSize: 14 }} />
-            <span>Generate with Gemini AI</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("markdown")}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 transition-all ${
-              tab === "markdown"
-                ? "bg-primary text-primary-fg shadow-xs"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            <ContentPasteIcon sx={{ fontSize: 14 }} />
-            <span>Paste Markdown Checklist</span>
-          </button>
-        </div>
+        {/* Tab Switcher (Create only) */}
+        {!isEditing && (
+          <div className="bg-background border-border flex rounded-xl border p-1 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setTab("ai")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 transition-all ${
+                tab === "ai"
+                  ? "bg-primary text-primary-fg shadow-xs"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+              <span>Generate with Gemini AI</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("markdown")}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 transition-all ${
+                tab === "markdown"
+                  ? "bg-primary text-primary-fg shadow-xs"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <ContentPasteIcon sx={{ fontSize: 14 }} />
+              <span>Paste Markdown Checklist</span>
+            </button>
+          </div>
+        )}
 
-        {/* Quick Presets (AI Tab) */}
-        {tab === "ai" && (
+        {/* Quick Presets (Create + AI Tab) */}
+        {!isEditing && tab === "ai" && (
           <div className="space-y-1.5">
             <label className="text-muted text-[11px] font-semibold tracking-wider uppercase">
               Quick Suggestions
@@ -236,14 +318,14 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
                       : "border-border bg-background text-muted hover:text-foreground hover:bg-surface-elevated"
                   }`}
                 >
-                  {preset.name}
+                  {preset.shortName}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Common Inputs: Name & Color */}
+        {/* Common Inputs: Name & Short Name */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <label className="text-muted text-xs font-semibold">Franchise Name</label>
@@ -252,7 +334,7 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
               value={name}
               onChange={(e) => {
                 setName(e.target.value)
-                if (!shortName) setShortName(e.target.value.slice(0, 14))
+                if (!shortNameEdited) setShortName(e.target.value.slice(0, 20))
               }}
               placeholder="e.g. Star Wars, Harry Potter"
               className="bg-background border-border text-foreground placeholder:text-muted focus:border-primary w-full rounded-xl border px-3 py-2 text-xs focus:outline-none"
@@ -264,13 +346,30 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
             <input
               type="text"
               value={shortName}
-              onChange={(e) => setShortName(e.target.value)}
+              onChange={(e) => {
+                setShortName(e.target.value)
+                setShortNameEdited(true)
+              }}
               placeholder="e.g. Star Wars"
-              maxLength={16}
+              maxLength={24}
               className="bg-background border-border text-foreground placeholder:text-muted focus:border-primary w-full rounded-xl border px-3 py-2 text-xs focus:outline-none"
             />
           </div>
         </div>
+
+        {/* Tagline (Edit mode & Markdown import) */}
+        {(isEditing || tab === "markdown") && (
+          <div className="space-y-1">
+            <label className="text-muted text-xs font-semibold">Tagline / Description</label>
+            <input
+              type="text"
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
+              placeholder="e.g. Complete chronological saga across films and series."
+              className="bg-background border-border text-foreground placeholder:text-muted focus:border-primary w-full rounded-xl border px-3 py-2 text-xs focus:outline-none"
+            />
+          </div>
+        )}
 
         {/* Color Palette */}
         <div className="space-y-1.5">
@@ -306,8 +405,8 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
           </div>
         </div>
 
-        {/* Tab 1: AI Scope Notes */}
-        {tab === "ai" && (
+        {/* AI Scope Notes (Create + AI Tab) */}
+        {!isEditing && tab === "ai" && (
           <div className="space-y-1">
             <label className="text-muted text-xs font-semibold">
               Curator Notes / Scope (Optional)
@@ -322,8 +421,8 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
           </div>
         )}
 
-        {/* Tab 2: Markdown Text */}
-        {tab === "markdown" && (
+        {/* Markdown Text (Create + Markdown Tab) */}
+        {!isEditing && tab === "markdown" && (
           <div className="space-y-1">
             <label className="text-muted text-xs font-semibold">Markdown Viewing Checklist</label>
             <textarea
@@ -347,7 +446,17 @@ export function AddFranchiseModal({ isOpen, onClose, onSuccess }: AddFranchiseMo
             Cancel
           </button>
 
-          {tab === "ai" ? (
+          {isEditing ? (
+            <button
+              type="button"
+              onClick={handleSaveEdit}
+              disabled={isLoading || !name.trim() || !shortName.trim()}
+              className="bg-primary hover:bg-primary/90 text-primary-fg flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-xs transition-all disabled:opacity-50"
+            >
+              <CheckIcon sx={{ fontSize: 15 }} />
+              <span>{isLoading ? "Saving..." : "Save Changes"}</span>
+            </button>
+          ) : tab === "ai" ? (
             <button
               type="button"
               onClick={handleGenerateAI}

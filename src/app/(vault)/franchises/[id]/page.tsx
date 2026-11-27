@@ -9,6 +9,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { FranchiseDashboard } from "@/components/franchises/FranchiseDashboard"
+import { FranchiseDetailSkeleton } from "@/components/ui/Skeleton"
 import {
   getAllFranchisesAction,
   getFranchiseItemsWithVault,
@@ -79,7 +80,7 @@ export default async function FranchiseDetailPage({ params }: FranchisePageProps
 
   return (
     <div className="animate-fade-in">
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-2xl bg-surface/50" />}>
+      <Suspense fallback={<FranchiseDetailSkeleton />}>
         <FranchiseDetailLoader id={id} />
       </Suspense>
     </div>

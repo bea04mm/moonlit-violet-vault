@@ -12,11 +12,7 @@ import { revalidatePath } from "next/cache"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { createClient } from "@/lib/supabase/server"
 import { getMediaRepository } from "@/lib/repositories/mediaRepository"
-import {
-  FRANCHISES_CATALOG,
-  FranchiseItem,
-  parseChecklistMarkdown,
-} from "@/data/franchises/franchiseData"
+import { FranchiseItem, parseChecklistMarkdown } from "@/data/franchises/franchiseData"
 import type { MediaItem, MediaType, MediaStatus, SeasonData } from "@/lib/supabase/database.types"
 
 /**
@@ -37,8 +33,9 @@ export interface FranchiseSummary {
   shortName: string
   tagline: string
   accentColor: string
-  isCustom?: boolean
   itemCount?: number
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface TmdbSearchResultItem {
@@ -118,56 +115,57 @@ function extractSeasonNumber(typeStr: string): number | null {
   return match ? parseInt(match[1], 10) : null
 }
 
+async function loadFranchiseRow(supabase: any, universe: string) {
+  const { data } = await supabase.from("franchises").select("*").eq("id", universe).single()
+  return data || null
+}
+
+async function persistFranchiseItems(supabase: any, universe: string, items: FranchiseItem[]) {
+  const { error } = await supabase
+    .from("franchises")
+    .update({
+      items,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", universe)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath("/franchises")
+  revalidatePath(`/franchises/${universe}`)
+}
+
+function mapRowToFranchiseSummary(d: any): FranchiseSummary {
+  return {
+    id: d.id,
+    name: d.name,
+    shortName: d.short_name || d.name,
+    tagline: d.tagline || "",
+    accentColor: d.accent_color || "#8B6CE8",
+    itemCount: Array.isArray(d.items) ? d.items.length : 0,
+    createdAt: d.created_at || undefined,
+    updatedAt: d.updated_at || undefined,
+  }
+}
+
 /**
- * Loads all available franchises (built-in Marvel/DC + any custom or customized franchises from Supabase).
- * Guarantees deduplicated, unique franchise summaries keyed by ID.
+ * Loads all franchises from Supabase.
  */
 export async function getAllFranchisesAction(): Promise<FranchiseSummary[]> {
-  const franchiseMap = new Map<string, FranchiseSummary>()
-
-  // 1. Seed with base built-in catalogs (Marvel, DC)
-  for (const f of Object.values(FRANCHISES_CATALOG)) {
-    franchiseMap.set(f.id, {
-      id: f.id,
-      name: f.name,
-      shortName: f.shortName,
-      tagline: f.tagline,
-      accentColor: f.accentColor,
-      isCustom: false,
-      itemCount: f.items.length,
-    })
-  }
-
   try {
     const supabase = await createClient()
     const { data, error } = await (supabase as any)
       .from("franchises")
-      .select("id, name, short_name, tagline, accent_color, items")
-      .order("created_at", { ascending: true })
+      .select("id, name, short_name, tagline, accent_color, items, created_at, updated_at")
+      .order("created_at", { ascending: false })
 
-    if (!error && Array.isArray(data)) {
-      for (const d of data) {
-        const isBuiltIn = Boolean(FRANCHISES_CATALOG[d.id])
-        const count = Array.isArray(d.items)
-          ? d.items.length
-          : FRANCHISES_CATALOG[d.id]?.items.length || 0
+    if (error || !Array.isArray(data)) return []
 
-        franchiseMap.set(d.id, {
-          id: d.id,
-          name: d.name,
-          shortName: d.short_name || d.name,
-          tagline: d.tagline || "",
-          accentColor: d.accent_color || "#8B6CE8",
-          isCustom: !isBuiltIn,
-          itemCount: count,
-        })
-      }
-    }
+    return data.map(mapRowToFranchiseSummary)
   } catch (err) {
-    console.warn("[getAllFranchisesAction] Failed to load custom franchises:", err)
+    console.warn("[getAllFranchisesAction] Failed to load franchises:", err)
+    return []
   }
-
-  return Array.from(franchiseMap.values())
 }
 
 /**
@@ -187,38 +185,22 @@ export async function getFranchiseItemsWithVault(
     const repo = await getMediaRepository()
     const allVaultItems = await repo.findAll()
 
-    let catalogItems: FranchiseItem[] = []
-    let franchiseInfo: FranchiseSummary | undefined
-
-    // 1. Check if dynamic / customized franchise exists in Supabase
     const supabase = await createClient()
-    const { data: dbData } = await (supabase as any)
-      .from("franchises")
-      .select("*")
-      .eq("id", universe)
-      .single()
+    const dbData = await loadFranchiseRow(supabase, universe)
 
-    if (dbData && Array.isArray(dbData.items) && dbData.items.length > 0) {
-      catalogItems = dbData.items as FranchiseItem[]
-      franchiseInfo = {
-        id: dbData.id,
-        name: dbData.name,
-        shortName: dbData.short_name,
-        tagline: dbData.tagline || "",
-        accentColor: dbData.accent_color || "#8B6CE8",
-        isCustom: !FRANCHISES_CATALOG[universe],
-      }
-    } else if (FRANCHISES_CATALOG[universe]) {
-      const cat = FRANCHISES_CATALOG[universe]
-      catalogItems = cat.items
-      franchiseInfo = {
-        id: cat.id,
-        name: cat.name,
-        shortName: cat.shortName,
-        tagline: cat.tagline,
-        accentColor: cat.accentColor,
-        isCustom: false,
-      }
+    if (!dbData) {
+      return { items: [], inVaultCount: 0, totalCount: 0 }
+    }
+
+    const catalogItems: FranchiseItem[] = Array.isArray(dbData.items)
+      ? (dbData.items as FranchiseItem[])
+      : []
+    const franchiseInfo: FranchiseSummary = {
+      id: dbData.id,
+      name: dbData.name,
+      shortName: dbData.short_name || dbData.name,
+      tagline: dbData.tagline || "",
+      accentColor: dbData.accent_color || "#8B6CE8",
     }
 
     // Index vault items by normalized title
@@ -284,15 +266,10 @@ export async function getFranchiseItemsWithVault(
     }
   } catch (error) {
     console.error("[getFranchiseItemsWithVault] Error:", error)
-    const fallbackItems = FRANCHISES_CATALOG[universe]?.items || []
     return {
-      items: fallbackItems.map((i) => ({
-        ...i,
-        inVault: false,
-        vaultType: resolveMediaType(i.type),
-      })),
+      items: [],
       inVaultCount: 0,
-      totalCount: fallbackItems.length,
+      totalCount: 0,
     }
   }
 }
@@ -472,24 +449,19 @@ export async function enrichAllFranchiseItemsAction(universe?: string): Promise<
 
     let catalogItems: FranchiseItem[] = []
     let franchiseName = "Franchise"
-    let franchiseRow: any = null
 
     if (universe) {
-      // 1. Fetch from Supabase franchises table first
-      const { data } = await (supabase as any)
-        .from("franchises")
-        .select("*")
-        .eq("id", universe)
-        .single()
-
-      if (data && Array.isArray(data.items) && data.items.length > 0) {
-        catalogItems = (data.items as FranchiseItem[]) || []
-        franchiseName = data.short_name || data.name
-        franchiseRow = data
-      } else if (FRANCHISES_CATALOG[universe]) {
-        catalogItems = [...FRANCHISES_CATALOG[universe].items]
-        franchiseName = FRANCHISES_CATALOG[universe].shortName
+      const data = await loadFranchiseRow(supabase as any, universe)
+      if (!data) {
+        return {
+          success: false,
+          enrichedCount: 0,
+          totalChecked: 0,
+          message: "Franchise not found.",
+        }
       }
+      catalogItems = Array.isArray(data.items) ? (data.items as FranchiseItem[]) : []
+      franchiseName = data.short_name || data.name || universe
     }
 
     // Index vault items
@@ -501,7 +473,7 @@ export async function enrichAllFranchiseItemsAction(universe?: string): Promise<
     let enrichedCount = 0
 
     // If a universe checklist is targeted, enrich its checklist items and any linked vault records
-    if (catalogItems.length > 0 && universe) {
+    if (universe) {
       let catalogModified = false
 
       for (let i = 0; i < catalogItems.length; i++) {
@@ -540,20 +512,7 @@ export async function enrichAllFranchiseItemsAction(universe?: string): Promise<
 
       // Persist enriched poster URLs and TMDB IDs into Supabase franchises table
       if (catalogModified) {
-        const name = franchiseRow?.name || FRANCHISES_CATALOG[universe]?.name || universe
-        const shortName = franchiseRow?.short_name || FRANCHISES_CATALOG[universe]?.shortName || universe
-        const tagline = franchiseRow?.tagline || FRANCHISES_CATALOG[universe]?.tagline || ""
-        const accentColor = franchiseRow?.accent_color || FRANCHISES_CATALOG[universe]?.accentColor || "#8B6CE8"
-
-        await (supabase as any).from("franchises").upsert({
-          id: universe,
-          name,
-          short_name: shortName,
-          tagline,
-          accent_color: accentColor,
-          items: catalogItems,
-          updated_at: new Date().toISOString(),
-        })
+        await persistFranchiseItems(supabase as any, universe, catalogItems)
       }
     } else {
       // General vault-wide enrichment fallback for all franchise-tagged vault items
@@ -575,12 +534,13 @@ export async function enrichAllFranchiseItemsAction(universe?: string): Promise<
     revalidatePath("/movies")
     revalidatePath("/series")
     revalidatePath("/franchises")
+    if (universe) revalidatePath(`/franchises/${universe}`)
     revalidatePath("/")
 
     return {
       success: true,
       enrichedCount,
-      totalChecked: catalogItems.length > 0 ? catalogItems.length : allVaultItems.length,
+      totalChecked: universe ? catalogItems.length : allVaultItems.length,
       message: `Enriched ${enrichedCount} ${franchiseName} titles with official TMDB API metadata and artwork.`,
     }
   } catch (error: any) {
@@ -686,8 +646,9 @@ export async function manuallyConnectFranchiseTmdbAction(params: {
 
   try {
     const repo = await getMediaRepository()
-    const franchiseTag =
-      params.universe === "marvel" ? "MCU" : params.universe === "dc" ? "DC" : params.universe
+    const supabase = await createClient()
+    const franchiseRow = await loadFranchiseRow(supabase as any, params.universe)
+    const franchiseTag = franchiseRow?.short_name || params.universe
     const requiredTags = [franchiseTag, params.franchiseEra]
 
     let coverUrl: string | undefined = undefined
@@ -907,20 +868,19 @@ export async function populateFranchiseToVaultAction(universe: string): Promise<
       if (item.type === "series") seenSeries.add(norm)
     })
 
-    let catalog: FranchiseItem[] = []
-    let franchiseTag = "MCU"
-
-    if (FRANCHISES_CATALOG[universe]) {
-      catalog = FRANCHISES_CATALOG[universe].items
-      franchiseTag = FRANCHISES_CATALOG[universe].shortName
-    } else {
-      const supabase = await createClient()
-      const { data } = await (supabase as any).from("franchises").select("*").eq("id", universe).single()
-      if (data) {
-        catalog = (data.items as FranchiseItem[]) || []
-        franchiseTag = data.short_name
+    const supabase = await createClient()
+    const data = await loadFranchiseRow(supabase as any, universe)
+    if (!data) {
+      return {
+        success: false,
+        createdCount: 0,
+        updatedCount: 0,
+        message: "Franchise not found.",
       }
     }
+
+    const catalog: FranchiseItem[] = Array.isArray(data.items) ? (data.items as FranchiseItem[]) : []
+    const franchiseTag = data.short_name || data.name || universe
 
     const toInsert: Partial<MediaItem>[] = []
     let updatedCount = 0
@@ -1044,7 +1004,7 @@ export async function toggleVaultItemWatchedAction(
         }
 
         let totalWatched = 0
-        let totalEpisodes = item.episode_count || 0
+        const totalEpisodes = item.episode_count || 0
         Object.values(seasonProgress).forEach((s) => {
           totalWatched += s.watched || 0
         })
@@ -1108,8 +1068,9 @@ export async function addAiProjectToVaultAction(project: {
   try {
     const repo = await getMediaRepository()
     const mediaType = resolveMediaType(project.type)
-    const franchiseTag =
-      project.universe === "marvel" ? "MCU" : project.universe === "dc" ? "DC" : project.universe
+    const supabase = await createClient()
+    const franchiseRow = await loadFranchiseRow(supabase as any, project.universe)
+    const franchiseTag = franchiseRow?.short_name || project.universe
 
     const tmdbData = await fetchTmdbMetadata(project.title, mediaType, project.year)
 
@@ -1433,6 +1394,7 @@ Return between 10 and 60 top chronological titles for the franchise. Only return
     }
 
     revalidatePath("/franchises")
+    revalidatePath(`/franchises/${slug}`)
 
     return {
       success: true,
@@ -1442,7 +1404,6 @@ Return between 10 and 60 top chronological titles for the franchise. Only return
         shortName: parsed.shortName || params.name,
         tagline: parsed.tagline || "",
         accentColor: params.accentColor || parsed.accentColor || "#E5B842",
-        isCustom: true,
       },
       itemCount: items.length,
       message: `Successfully generated ${items.length} titles for "${parsed.shortName || params.name}"!`,
@@ -1457,9 +1418,9 @@ Return between 10 and 60 top chronological titles for the franchise. Only return
 }
 
 /**
- * Creates a custom franchise from user-provided Markdown or details and saves it to Supabase.
+ * Creates a franchise from user-provided Markdown or details and saves it to Supabase.
  */
-export async function createCustomFranchiseAction(params: {
+export async function createFranchiseAction(params: {
   name: string
   shortName: string
   tagline?: string
@@ -1477,7 +1438,7 @@ export async function createCustomFranchiseAction(params: {
       .replace(/[^\w\s-]/g, "")
       .replace(/\s+/g, "-")
       .trim()
-    const slug = rawSlug || `custom-${Date.now()}`
+    const slug = rawSlug || `franchise-${Date.now()}`
 
     let items: FranchiseItem[] = []
     if (params.markdown?.trim()) {
@@ -1489,7 +1450,7 @@ export async function createCustomFranchiseAction(params: {
       id: slug,
       name: params.name,
       short_name: params.shortName,
-      tagline: params.tagline || null,
+      tagline: params.tagline?.trim() || null,
       accent_color: params.accentColor || "#8B6CE8",
       items,
       updated_at: new Date().toISOString(),
@@ -1500,6 +1461,7 @@ export async function createCustomFranchiseAction(params: {
     }
 
     revalidatePath("/franchises")
+    revalidatePath(`/franchises/${slug}`)
 
     return {
       success: true,
@@ -1507,9 +1469,8 @@ export async function createCustomFranchiseAction(params: {
         id: slug,
         name: params.name,
         shortName: params.shortName,
-        tagline: params.tagline || "",
+        tagline: params.tagline?.trim() || "",
         accentColor: params.accentColor || "#8B6CE8",
-        isCustom: true,
       },
       itemCount: items.length,
       message: `Created "${params.shortName}" franchise with ${items.length} titles.`,
@@ -1523,22 +1484,77 @@ export async function createCustomFranchiseAction(params: {
 }
 
 /**
- * Deletes a custom franchise from Supabase.
+ * Updates a franchise's metadata (name, shortName, tagline, accentColor) in Supabase.
  */
-export async function deleteCustomFranchiseAction(franchiseId: string): Promise<{
+export async function updateFranchiseAction(params: {
+  id: string
+  name: string
+  shortName: string
+  tagline?: string
+  accentColor?: string
+}): Promise<{
+  success: boolean
+  franchise?: FranchiseSummary
+  message: string
+}> {
+  const name = params.name.trim()
+  const shortName = params.shortName.trim()
+  const tagline = params.tagline?.trim() || ""
+  const accentColor = params.accentColor || "#8B6CE8"
+
+  if (!name || !shortName) {
+    return { success: false, message: "Franchise name and short label are required." }
+  }
+
+  try {
+    const supabase = await createClient()
+    const { data, error } = await (supabase as any)
+      .from("franchises")
+      .update({
+        name,
+        short_name: shortName,
+        tagline: tagline || null,
+        accent_color: accentColor,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.id)
+      .select("id, name, short_name, tagline, accent_color, items, created_at, updated_at")
+      .single()
+
+    if (error || !data) {
+      throw new Error(error?.message || "Franchise not found.")
+    }
+
+    revalidatePath("/franchises")
+    revalidatePath(`/franchises/${params.id}`)
+
+    return {
+      success: true,
+      franchise: mapRowToFranchiseSummary(data),
+      message: `Updated "${data.short_name}" franchise.`,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err.message || "Failed to update franchise.",
+    }
+  }
+}
+
+/**
+ * Deletes a franchise from Supabase.
+ */
+export async function deleteFranchiseAction(franchiseId: string): Promise<{
   success: boolean
   message: string
 }> {
-  if (franchiseId === "marvel" || franchiseId === "dc") {
-    return { success: false, message: "Built-in franchises cannot be deleted." }
-  }
-
   try {
     const supabase = await createClient()
     const { error } = await (supabase as any).from("franchises").delete().eq("id", franchiseId)
     if (error) throw new Error(error.message)
 
     revalidatePath("/franchises")
+    revalidatePath(`/franchises/${franchiseId}`)
     return { success: true, message: "Franchise deleted." }
   } catch (err: any) {
     return { success: false, message: err.message || "Failed to delete franchise." }
@@ -1568,36 +1584,17 @@ export async function saveFranchiseItemAction(params: {
 }> {
   try {
     const supabase = await createClient()
-
-    // 1. Fetch existing franchise record or fallback to default catalog
-    const { data: existingRow } = await (supabase as any)
-      .from("franchises")
-      .select("*")
-      .eq("id", params.universe)
-      .single()
-
-    let items: FranchiseItem[] = []
-    let name = params.universe
-    let shortName = params.universe
-    let tagline = ""
-    let accentColor = "#8B6CE8"
-
-    if (existingRow) {
-      items = (existingRow.items as FranchiseItem[]) || []
-      name = existingRow.name
-      shortName = existingRow.short_name
-      tagline = existingRow.tagline || ""
-      accentColor = existingRow.accent_color || "#8B6CE8"
-    } else if (FRANCHISES_CATALOG[params.universe]) {
-      const base = FRANCHISES_CATALOG[params.universe]
-      items = [...base.items]
-      name = base.name
-      shortName = base.shortName
-      tagline = base.tagline
-      accentColor = base.accentColor
+    const existingRow = await loadFranchiseRow(supabase as any, params.universe)
+    if (!existingRow) {
+      return { success: false, message: "Franchise not found." }
     }
 
-    // 2. Either update existing item or append new item
+    const items: FranchiseItem[] = Array.isArray(existingRow.items)
+      ? [...(existingRow.items as FranchiseItem[])]
+      : []
+    const shortName = existingRow.short_name || existingRow.name || params.universe
+
+    // Either update existing item or append new item
     let savedItem: FranchiseItem
 
     if (params.item.id) {
@@ -1641,20 +1638,7 @@ export async function saveFranchiseItemAction(params: {
       items.push(savedItem)
     }
 
-    // 3. Upsert into Supabase franchises table
-    const { error } = await (supabase as any).from("franchises").upsert({
-      id: params.universe,
-      name,
-      short_name: shortName,
-      tagline,
-      accent_color: accentColor,
-      items,
-      updated_at: new Date().toISOString(),
-    })
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath("/franchises")
+    await persistFranchiseItems(supabase as any, params.universe, items)
 
     return {
       success: true,
@@ -1683,56 +1667,21 @@ export async function deleteFranchiseItemAction(params: {
 }> {
   try {
     const supabase = await createClient()
-
-    // 1. Fetch existing franchise record or fallback to default catalog
-    const { data: existingRow } = await (supabase as any)
-      .from("franchises")
-      .select("*")
-      .eq("id", params.universe)
-      .single()
-
-    let items: FranchiseItem[] = []
-    let name = params.universe
-    let shortName = params.universe
-    let tagline = ""
-    let accentColor = "#8B6CE8"
-
-    if (existingRow) {
-      items = (existingRow.items as FranchiseItem[]) || []
-      name = existingRow.name
-      shortName = existingRow.short_name
-      tagline = existingRow.tagline || ""
-      accentColor = existingRow.accent_color || "#8B6CE8"
-    } else if (FRANCHISES_CATALOG[params.universe]) {
-      const base = FRANCHISES_CATALOG[params.universe]
-      items = [...base.items]
-      name = base.name
-      shortName = base.shortName
-      tagline = base.tagline
-      accentColor = base.accentColor
+    const existingRow = await loadFranchiseRow(supabase as any, params.universe)
+    if (!existingRow) {
+      return { success: false, message: "Franchise not found." }
     }
 
-    const initialLen = items.length
-    items = items.filter((it) => it.id !== params.itemId)
+    const currentItems: FranchiseItem[] = Array.isArray(existingRow.items)
+      ? (existingRow.items as FranchiseItem[])
+      : []
+    const items = currentItems.filter((it) => it.id !== params.itemId)
 
-    if (items.length === initialLen) {
+    if (items.length === currentItems.length) {
       return { success: false, message: "Title not found in checklist." }
     }
 
-    // 2. Upsert updated items list into Supabase franchises table
-    const { error } = await (supabase as any).from("franchises").upsert({
-      id: params.universe,
-      name,
-      short_name: shortName,
-      tagline,
-      accent_color: accentColor,
-      items,
-      updated_at: new Date().toISOString(),
-    })
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath("/franchises")
+    await persistFranchiseItems(supabase as any, params.universe, items)
 
     return {
       success: true,
